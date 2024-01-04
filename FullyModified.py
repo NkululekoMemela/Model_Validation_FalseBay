@@ -151,11 +151,12 @@ def obs_2_new_timeaxis(time_model, time_obs, data_obs, time_threshold=timedelta(
     print("5. Im in obs_2_new_timeaxis")
 
     # obs = post.get_ds(fname_obs)
+    obs =  hourly_2_frequency(fname_obs,conversionType="D")
     # model = post.get_ds(dir_model+SelectFiles)
     # data_obs = np.squeeze(obs[var].values)
     # time_obs = obs.time.values
     # get the observations time-series
-    # time_obs, data_obs, long_obs, lat_obs = get_ts_obs(fname_obs,var,)
+    time_obs, data_obs, long_obs, lat_obs = get_ts_obs(fname_obs,var,obs)
     # time_model, data_model = get_ts(dir_model,var,depth=depth,time_lims=[time_obs[0],time_obs[-1]])
 
     # # Merge datasets on the model time axis, keeping only rows where the time values match
@@ -206,7 +207,7 @@ def get_model_obs_ts(fname,fname_obs,fname_out,obs,conversionType='D',var='temp'
     time_obs, data_obs, long_obs, lat_obs = get_ts_obs(fname_obs,var,obs)   
     
     # get the model time-series
-    time_model, data_model = get_ts(fname,var,long_obs,lat_obs,ref_date,depth=depth,time_lims=[time_obs[0],time_obs[100]]) # Change the 10 back to -1
+    time_model, data_model = get_ts(fname,var,long_obs,lat_obs,ref_date,depth=depth,time_lims=[time_obs[0],time_obs[300]]) # Change the 10 back to -1
         
     # get the observations onto the model time axis
     data_obs_model_timeaxis = obs_2_new_timeaxis(time_model, time_obs, data_obs, time_threshold=time_threshold)
@@ -257,7 +258,7 @@ if __name__ == "__main__":
     
     dir_model = '/mnt/d/Run_False_Bay_2008_2018_SANHO/croco_avg_Y2013M*.nc.1'
     fname_obs = '/mnt/d/DATA-20231010T133411Z-003/DATA/ATAP/Processed/Data_Validation/FalseBaydata_FB001.nc'
-    fname_out = 'OutPut_03_Jan_24.nc'
+    fname_out = 'OutPut_04_Jan_24.nc'
     
     # Output file name and directory
     output_directory = "/mnt/d/Run_False_Bay_2008_2018_SANHO/Validation/ATAP/scripts/"

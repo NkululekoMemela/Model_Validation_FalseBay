@@ -8,7 +8,7 @@ Created on Thu Jan  4 14:35:41 2024
 
 import netCDF4 as nc
 # Open the NetCDF file
-nc_file = nc.Dataset('../OutPut_02_Jan_24.nc', 'r')
+nc_file = nc.Dataset('../OutPut_04_Jan_24.nc', 'r')
 
 # List all variables in the NetCDF file
 print("Variables in the NetCDF file:")
@@ -21,7 +21,7 @@ for variable_name in nc_file.variables.keys():
     
     # Print the top 5 data points for each variable
     print(f"Top 5 data points for variable '{variable_name}':")
-    print(variable_data[:5])
+    print(variable_data[:95])
     print()
 
 # Close the NetCDF file
