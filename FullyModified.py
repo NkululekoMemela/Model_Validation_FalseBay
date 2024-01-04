@@ -41,6 +41,7 @@ The next Function is for matching time axis of both the insitu and model dataset
 
 
 def hourly_2_frequency(fname_obs, conversionType):
+    print("1. Im in hourly_2_frequency")
     # Load xarray dataset
     obs = xr.open_dataset(fname_obs)
     if conversionType == 'D/12':
@@ -57,7 +58,6 @@ def hourly_2_frequency(fname_obs, conversionType):
         return obs.resample(time="1W").mean()
     if conversionType == 'M':
         return obs.resample(time="1M").mean()
-
     return obs
 
 
@@ -67,6 +67,7 @@ def hourly_2_frequency(fname_obs, conversionType):
 
 
 def get_ts_obs(fname_obs, var, obs):
+    print("2. Im in get_ts_obs")
     # A generic function like this will work if we process all the observations
     # from different sources into the same format
     # Cleaning out duplicates from the dataset
@@ -92,6 +93,7 @@ def get_ts_obs(fname_obs, var, obs):
 
 
 def find_nearest_point(fname, Longi, Latit):
+    print("3. Im in find_nearest_point")
 
     # for effeciency we shouldn't use open_mfdataset for this function
     # only use the first file
@@ -119,6 +121,7 @@ def find_nearest_point(fname, Longi, Latit):
 
 
 def get_ts(fname, var, lon, lat, ref_date, depth=-1, time_lims=[]):
+    print("4. Im in get_ts")
     # this function will eventually get moved into the postprocess.py file of the somisana repo
     # which is why I'd call it just 'get_ts', as it will be obvious that it relates to croco model output
     # you can use xr.open_mfdataset(dir_model+*nc+model_suffix) as you've been doing or rather loop through the correct months
@@ -145,6 +148,7 @@ def get_ts(fname, var, lon, lat, ref_date, depth=-1, time_lims=[]):
 
 
 def obs_2_new_timeaxis(time_model, time_obs, data_obs, time_threshold=timedelta(hours=12)):
+    print("5. Im in obs_2_new_timeaxis")
 
     # obs = post.get_ds(fname_obs)
     # model = post.get_ds(dir_model+SelectFiles)
@@ -192,63 +196,60 @@ def obs_2_new_timeaxis(time_model, time_obs, data_obs, time_threshold=timedelta(
 """
     
 def get_model_obs_ts(fname,fname_obs,fname_out,obs,conversionType='D',var='temp',depth=-1,ref_date=None,time_threshold=timedelta(hours=12)):
+    print("6. Im in get_model_obs_ts")
     # the output of this function is a netcdf file 'fname_out'
     # which will have the model and observations on the same time axis
     
     obs =  hourly_2_frequency(fname_obs,conversionType)
     
     # get the observations time-series
-    time_obs, data_obs, long_obs, lat_obs = get_ts_obs(fname_obs,var,obs)
+    time_obs, data_obs, long_obs, lat_obs = get_ts_obs(fname_obs,var,obs)   
     
     # get the model time-series
-    time_model, data_model = get_ts(fname,var,long_obs,lat_obs,ref_date,depth=depth,time_lims=[time_obs[0],time_obs[10]]) # Change the 10 back to -1
-    
+    time_model, data_model = get_ts(fname,var,long_obs,lat_obs,ref_date,depth=depth,time_lims=[time_obs[0],time_obs[100]]) # Change the 10 back to -1
+        
     # get the observations onto the model time axis
     data_obs_model_timeaxis = obs_2_new_timeaxis(time_model, time_obs, data_obs, time_threshold=time_threshold)
     
-    return data_obs_model_timeaxis
-    # Create a NetCDF File
     
-    
-    # Output file name and directory
-    output_directory = "/mnt/d/Run_False_Bay_2008_2018_SANHO/Validation/ATAP/scripts"
-    output_file_name = "OutPut_01_Jan_24.nc"
-    output_path = os.path.join(output_directory, output_file_name)
     # Create a NetCDF File
-    with nc.Dataset(fname_out, 'w', format='NETCDF4') as nc_file:
+    with nc.Dataset(output_path, 'w', format='NETCDF4') as nc_file:
         # Create dimensions
         nc_file.createDimension('time', len(time_model))
         nc_file.createDimension('latitude', len(lat_obs))
         nc_file.createDimension('longitude', len(long_obs))
-
+        
+        print(f"6.1 NetCDF file created at: {output_path}")
         # Create variables
-        time_var = nc_file.createVariable('time', 'f8', ('time',))
-        lat_var = nc_file.createVariable('latitude', 'f4', ('latitude',))
-        lon_var = nc_file.createVariable('longitude', 'f4', ('longitude',))
-        obs_var = nc_file.createVariable('data_obs', 'f4', ('time', 'latitude', 'longitude',))
-        model_var = nc_file.createVariable('data_model', 'f4', ('time', 'latitude', 'longitude',))
-        obs_model_var = nc_file.createVariable('data_obs_model_timeaxis', 'f4', ('time', 'latitude', 'longitude',))
-
+        time_var = nc_file.createVariable('time', 'f8', ('time'))
+        lat_var = nc_file.createVariable('latitude', 'f4', ('latitude'))
+        lon_var = nc_file.createVariable('longitude', 'f4', ('longitude'))
+        model_var = nc_file.createVariable('data_model', 'f4', ('time', 'latitude', 'longitude'))
+        obs_model_var = nc_file.createVariable('data_obs_model_timeaxis', 'f4', ('time', 'latitude', 'longitude'))
+    
+        # Convert datetime objects to Unix timestamps (floats)
+        float_time_model = np.array([dt.timestamp() for dt in time_model], dtype=float)
+        
+        print(float_time_model)
+    
         # Assign data to variables
-        time_var[:] = time_model
+        time_var[:] = float_time_model
         lat_var[:] = lat_obs
         lon_var[:] = long_obs
-        obs_var[:, :, :] = data_obs
         model_var[:, :, :] = data_model
         obs_model_var[:, :, :] = data_obs_model_timeaxis
-
+    
         # Add attributes if needed
-        time_var.units = 'your_time_unit'
-        lat_var.units = 'your_latitude_unit'
-        lon_var.units = 'your_longitude_unit'
-        obs_var.units = 'your_observation_unit'
-        model_var.units = 'your_model_unit'
-        obs_model_var.units = 'your_obs_model_timeaxis_unit'
+        time_var.units = 'day'
+        lat_var.units = 'latitude'
+        lon_var.units = 'longitude'
+        model_var.units = 'degrees Celsius'
+        obs_model_var.units = 'degrees Celsius'
 
     # Use the output_path variable as needed
     print(f"NetCDF file created at: {output_path}")
     
-
+    # return data_obs_model_timeaxis
 
 if __name__ == "__main__":
     
@@ -256,7 +257,12 @@ if __name__ == "__main__":
     
     dir_model = '/mnt/d/Run_False_Bay_2008_2018_SANHO/croco_avg_Y2013M*.nc.1'
     fname_obs = '/mnt/d/DATA-20231010T133411Z-003/DATA/ATAP/Processed/Data_Validation/FalseBaydata_FB001.nc'
-    fname_out = ''''''
+    fname_out = 'OutPut_03_Jan_24.nc'
+    
+    # Output file name and directory
+    output_directory = "/mnt/d/Run_False_Bay_2008_2018_SANHO/Validation/ATAP/scripts/"
+    output_path = os.path.join(output_directory, fname_out)
+    
     # SelectFiles = "croco_avg_Y2013M*.nc.1"
     var = 'temp'
     depth=-35
