@@ -39,7 +39,6 @@ The next Function is for matching time axis of both the insitu and model dataset
     M - denotes monthly conversion
 """
 
-
 def hourly_2_frequency(fname_obs, conversionType):
     print("1. Im in hourly_2_frequency")
     # Load xarray dataset
@@ -138,6 +137,7 @@ def get_ts(fname, var, lon, lat, ref_date, depth=-1, time_lims=[]):
                               eta=j,
                               xi=i,
                               ref_date=ref_date)
+    
 
     return time_model, data_model
 
@@ -159,15 +159,7 @@ def obs_2_new_timeaxis(time_model, time_obs, data_obs, time_threshold=timedelta(
     time_obs, data_obs, long_obs, lat_obs = get_ts_obs(fname_obs,var,obs)
     # time_model, data_model = get_ts(dir_model,var,depth=depth,time_lims=[time_obs[0],time_obs[-1]])
 
-    # # Merge datasets on the model time axis, keeping only rows where the time values match
-    # CombineDateTimes_df = pd.merge(time_model,time_obs,tolerance=time_threshold)
-
-    # # Calculate the average temperature between consequetive observation timesteps
-    # # obs['average_temperature'] = (obs['temperature'] + obs['temperature'].shift(-1)) / 2
-    # CombineDateTimes_df['average_temperature'] = (data_obs+ data_obs.shift(-1)) / 2
-
-    # # Use the time axis from the first dataset
-    # data_obs_model_timeaxis = CombineDateTimes_df['time', 'average_temperature']
+    # time_model=[datetime.datetime(2013, 1, 1, 12, 0), datetime.datetime(2013, 1, 2, 12, 0), datetime.datetime(2013, 1, 3, 12, 0), datetime.datetime(2013, 1, 4, 12, 0), datetime.datetime(2013, 1, 5, 12, 0), datetime.datetime(2013, 1, 6, 12, 0), datetime.datetime(2013, 1, 7, 12, 0)]
 
     # Approach:
         # Steps
@@ -176,20 +168,44 @@ def obs_2_new_timeaxis(time_model, time_obs, data_obs, time_threshold=timedelta(
     data_obs_model_timeaxis = [None for i in range(len(time_model))]
         # Step 0: Create data_obs_model_timeaxis and set it to be data_obs
         # Step 1: Loop through the dataset obs.
-        
+     
+    # time_model = [1,2,3,4,5,6]    
+    # time_obs   = [1,3,4,5,6]  
+    # data_obs   = [11,23,14,15]
+    
+    # formatted_time_obs = [(obz+time_threshold).strftime("%Y-%m-%d %H:%M:%S") for obz in time_obs] 
+    formatted_time_obs = [(obz+time_threshold) for obz in time_obs] 
+    # new_times = [obz + timedelta(hours=12) for obz in time_obs]
+    
+    # print(formatted_obs)
+    # print(type(time_model[0]))
+    a = 52
+          
     for obz in time_model:
+        # print(obz,'==',formatted_time_obs[a])
+        a += 1
+        # print(obz,time_model[0])
+        # print(obz==time_model[0])
+        print(formatted_time_obs[a],time_model[0], formatted_time_obs[a]==time_model[0])
+        
         
         # Step 2: Check the time component in time_obs and in each record if it is contained in time_obs then.
-        if obz in time_obs:            
+        if obz in formatted_time_obs:            
         # Step 3: If contained then replace that time value in with a value in time_model in the same index.
-            index = time_obs.index(obz)
+            index = time_model.index(obz)
+            # print(obz,index)
             data_obs_model_timeaxis[index] = data_obs[index]
+            # print(len(data_obs_model_timeaxis),len(data_obs))
+            # print("Print Obs on the right time axis")
+            # print(data_obs_model_timeaxis[index],data_obs[index])
         # Step 4: Return updated data_obs_model_timeaxis
 
     return data_obs_model_timeaxis
 
    
+# Extract the structure without values
 
+# datetime.strptime(obz,"%Y-%m-%d %H:%M:%S")
     
 
 """
@@ -207,11 +223,11 @@ def get_model_obs_ts(fname,fname_obs,fname_out,obs,conversionType='D',var='temp'
     time_obs, data_obs, long_obs, lat_obs = get_ts_obs(fname_obs,var,obs)   
     
     # get the model time-series
-    time_model, data_model = get_ts(fname,var,long_obs,lat_obs,ref_date,depth=depth,time_lims=[time_obs[0],time_obs[300]]) # Change the 10 back to -1
-        
+    time_model, data_model = get_ts(fname,var,long_obs,lat_obs,ref_date,depth=depth,time_lims=[time_obs[0],time_obs[100]]) # Change the 10 back to -1
+ 
     # get the observations onto the model time axis
     data_obs_model_timeaxis = obs_2_new_timeaxis(time_model, time_obs, data_obs, time_threshold=time_threshold)
-    
+    print(data_obs_model_timeaxis)
     
     # Create a NetCDF File
     with nc.Dataset(output_path, 'w', format='NETCDF4') as nc_file:
@@ -231,7 +247,7 @@ def get_model_obs_ts(fname,fname_obs,fname_out,obs,conversionType='D',var='temp'
         # Convert datetime objects to Unix timestamps (floats)
         float_time_model = np.array([dt.timestamp() for dt in time_model], dtype=float)
         
-        print(float_time_model)
+        # print(float_time_model)
     
         # Assign data to variables
         time_var[:] = float_time_model
@@ -258,7 +274,7 @@ if __name__ == "__main__":
     
     dir_model = '/mnt/d/Run_False_Bay_2008_2018_SANHO/croco_avg_Y2013M*.nc.1'
     fname_obs = '/mnt/d/DATA-20231010T133411Z-003/DATA/ATAP/Processed/Data_Validation/FalseBaydata_FB001.nc'
-    fname_out = 'OutPut_04_Jan_24.nc'
+    fname_out = 'OutPut_05_Jan_24.nc'
     
     # Output file name and directory
     output_directory = "/mnt/d/Run_False_Bay_2008_2018_SANHO/Validation/ATAP/scripts/"
