@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 """
 Created on Fri Dec 22 13:39:09 2023
-
 @author: nkululeko
 """
 
@@ -12,7 +11,6 @@ Created on Fri Dec 22 13:39:09 2023
 import numpy as np
 import xarray as xr 
 from glob import glob
-from natsort import natsorted
 from datetime import datetime
 import sys
 directory_path = '/home/nkululeko/somisana/toolkit/cli/applications/croco'
@@ -21,15 +19,11 @@ import postprocess as post
 import netCDF4 as nc
 import pandas as pd
 import os
-# import your libraries here
 from datetime import datetime,timedelta
 # import your libraries here
 
-# %%
-
-"""
-The next Function is for matching time axis of both the insitu and model datasets:
-    
+# %% The next Function is for matching time frequencies of both the insitu and model datasets:
+"""    
     D/12- denotes 2 HOURLY  conversion
     D/6 - denotes 4 HOURLY  conversion
     D/4 - denotes 6 HOURLY conversion
@@ -59,12 +53,10 @@ def hourly_2_frequency(fname_obs, conversionType):
         return obs.resample(time="1M").mean()
     return obs
 
-
+# %%
 """
        The next Function is for loading IN SITU time series:
 """
-
-
 def get_ts_obs(fname_obs, var, obs):
     print("2. Im in get_ts_obs")
     # A generic function like this will work if we process all the observations
@@ -73,23 +65,19 @@ def get_ts_obs(fname_obs, var, obs):
     # obs = post.get_ds(fname_obs)
     # obs = xr.open_dataset(fname_obs)
     data_obs = np.squeeze(obs[var].values)
-
     # Temperature is the data observation
     time_obs = obs.time.values
     # time_obs = pd.to_datetime(time_obs)
-
     time_obs = time_obs.astype('datetime64[s]').astype(datetime)
-
     long_obs = obs.longitude.values
     lat_obs = obs.latitude.values
 
     return time_obs, data_obs, long_obs, lat_obs
 
-
+# %%
 """
        The next METHOD is for finding the nearest point to insitu data in the model:
 """
-
 
 def find_nearest_point(fname, Longi, Latit):
     print("3. Im in find_nearest_point")
@@ -111,14 +99,10 @@ def find_nearest_point(fname, Longi, Latit):
 
     return j, i
 
-
+# %%
 """
        The next Function is for getting MODEL time series:
 """
-
-# def get_ts(dir_model,var,depth=-1,model_suffix='',time_lims=[]):
-
-
 def get_ts(fname, var, lon, lat, ref_date, depth=-1, time_lims=[]):
     print("4. Im in get_ts")
     # this function will eventually get moved into the postprocess.py file of the somisana repo
@@ -138,76 +122,59 @@ def get_ts(fname, var, lon, lat, ref_date, depth=-1, time_lims=[]):
                               xi=i,
                               ref_date=ref_date)
     
-
     return time_model, data_model
 
-
+# %%
 """
        The next Function is for matching time axis of both the insitu and model datasets:
 """
 
-
 def obs_2_new_timeaxis(time_model, time_obs, data_obs, time_threshold=timedelta(hours=12)):
     print("5. Im in obs_2_new_timeaxis")
-
-    # obs = post.get_ds(fname_obs)
-    obs =  hourly_2_frequency(fname_obs,conversionType="D")
-    # model = post.get_ds(dir_model+SelectFiles)
-    # data_obs = np.squeeze(obs[var].values)
-    # time_obs = obs.time.values
-    # get the observations time-series
-    time_obs, data_obs, long_obs, lat_obs = get_ts_obs(fname_obs,var,obs)
-    # time_model, data_model = get_ts(dir_model,var,depth=depth,time_lims=[time_obs[0],time_obs[-1]])
-
-    # time_model=[datetime.datetime(2013, 1, 1, 12, 0), datetime.datetime(2013, 1, 2, 12, 0), datetime.datetime(2013, 1, 3, 12, 0), datetime.datetime(2013, 1, 4, 12, 0), datetime.datetime(2013, 1, 5, 12, 0), datetime.datetime(2013, 1, 6, 12, 0), datetime.datetime(2013, 1, 7, 12, 0)]
-
-    # Approach:
+    # My Approach:
         # Steps
-        # Steps -2: Convert the hourly data of time_obs to daily data.
-        # Steps -1:
+        # Step 1: Convert the hourly data of time_obs to daily data. Or more specifically to the model freq.
+    obs =  hourly_2_frequency(fname_obs,conversionType='D')
+        # Step 2: Load observation time series after making it daily.
+    time_obs, data_obs, long_obs, lat_obs = get_ts_obs(fname_obs,var,obs)
+        # Step 3: Create data_obs_model_timeaxis and set it to be data_obs
     data_obs_model_timeaxis = [None for i in range(len(time_model))]
-        # Step 0: Create data_obs_model_timeaxis and set it to be data_obs
-        # Step 1: Loop through the dataset obs.
-     
-    # time_model = [1,2,3,4,5,6]    
-    # time_obs   = [1,3,4,5,6]  
-    # data_obs   = [11,23,14,15]
-    
-    # formatted_time_obs = [(obz+time_threshold).strftime("%Y-%m-%d %H:%M:%S") for obz in time_obs] 
+        # Step 4: Loop through the dataset of obs and add thrashold to make it match time_model data.  
     formatted_time_obs = [(obz+time_threshold) for obz in time_obs] 
-    # new_times = [obz + timedelta(hours=12) for obz in time_obs]
-    
-    # print(formatted_obs)
-    # print(type(time_model[0]))
-    a = 52
-          
+
     for obz in time_model:
-        # print(obz,'==',formatted_time_obs[a])
-        a += 1
-        # print(obz,time_model[0])
-        # print(obz==time_model[0])
-        print(formatted_time_obs[a],time_model[0], formatted_time_obs[a]==time_model[0])
-        
-        
-        # Step 2: Check the time component in time_obs and in each record if it is contained in time_obs then.
+        # Step 5: Check the time component in time_obs and in each record if it is contained in time_obs then.
         if obz in formatted_time_obs:            
-        # Step 3: If contained then replace that time value in with a value in time_model in the same index.
+        # Step 6: If contained then replace that time value in with a value in time_model in the same index.
             index = time_model.index(obz)
-            # print(obz,index)
             data_obs_model_timeaxis[index] = data_obs[index]
-            # print(len(data_obs_model_timeaxis),len(data_obs))
-            # print("Print Obs on the right time axis")
-            # print(data_obs_model_timeaxis[index],data_obs[index])
-        # Step 4: Return updated data_obs_model_timeaxis
+        # Step 7: Return updated data_obs_model_timeaxis
 
     return data_obs_model_timeaxis
-
-   
-# Extract the structure without values
-
-# datetime.strptime(obz,"%Y-%m-%d %H:%M:%S")
     
+# %% Statistical analysis section
+decimal = 3
+def calculate_rmse(obs_data, model_data):
+    # Calculate RMSE, ignoring NaN values
+    rmse = round(np.sqrt(np.nanmean((obs_data - model_data)**2)),decimal)
+    return rmse
 
+def calculate_correlation(obs_data, model_data):
+    # Calculate correlation, ignoring NaN values. This function is not really working but I am on it.
+    correlation = round(np.corrcoef(obs_data, model_data)[0, 1],decimal)
+    return correlation
+
+def calculate_std_dev(data):
+    # Calculate standard deviation, ignoring NaN values
+    std_dev = round(np.nanstd(data),decimal)
+    return std_dev
+
+def calculate_total_bias(obs_data, model_data):
+    # Calculate total bias, ignoring NaN values
+    bias = round(np.nanmean(obs_data - model_data),decimal)
+    return bias
+
+# %%
 """
        The next Function is for retrieving all datasets from the previous functions and package them into a netCDF file: 
 """
@@ -223,12 +190,12 @@ def get_model_obs_ts(fname,fname_obs,fname_out,obs,conversionType='D',var='temp'
     time_obs, data_obs, long_obs, lat_obs = get_ts_obs(fname_obs,var,obs)   
     
     # get the model time-series
-    time_model, data_model = get_ts(fname,var,long_obs,lat_obs,ref_date,depth=depth,time_lims=[time_obs[0],time_obs[100]]) # Change the 10 back to -1
+    time_model, data_model = get_ts(fname,var,long_obs,lat_obs,ref_date,depth=depth,time_lims=[time_obs[0],time_obs[-1]]) # Change the 10 back to -1
  
     # get the observations onto the model time axis
     data_obs_model_timeaxis = obs_2_new_timeaxis(time_model, time_obs, data_obs, time_threshold=time_threshold)
-    print(data_obs_model_timeaxis)
-    
+    # print(data_obs_model_timeaxis)
+        
     # Create a NetCDF File
     with nc.Dataset(output_path, 'w', format='NETCDF4') as nc_file:
         # Create dimensions
@@ -246,8 +213,12 @@ def get_model_obs_ts(fname,fname_obs,fname_out,obs,conversionType='D',var='temp'
     
         # Convert datetime objects to Unix timestamps (floats)
         float_time_model = np.array([dt.timestamp() for dt in time_model], dtype=float)
-        
         # print(float_time_model)
+        
+        # Convert each float timestamp to datetime
+        time_model = [datetime.fromtimestamp(float_time) for float_time in float_time_model]
+        for dt in time_model:
+            print(dt)
     
         # Assign data to variables
         time_var[:] = float_time_model
@@ -257,24 +228,41 @@ def get_model_obs_ts(fname,fname_obs,fname_out,obs,conversionType='D',var='temp'
         obs_model_var[:, :, :] = data_obs_model_timeaxis
     
         # Add attributes if needed
-        time_var.units = 'day'
+        time_var.units = 'days'
         lat_var.units = 'latitude'
         lon_var.units = 'longitude'
         model_var.units = 'degrees Celsius'
         obs_model_var.units = 'degrees Celsius'
+        
+        # Calculate and add correlations as attributes
+        correlation_model_obs = calculate_correlation(data_obs_model_timeaxis, data_model)
+        nc_file.setncattr('correlation_model_obs', correlation_model_obs)
+        
+        # Calculate and add standard deviations as attributes
+        std_dev_model = calculate_std_dev(data_model)
+        std_dev_obs_model = calculate_std_dev(data_obs_model_timeaxis)
+        nc_file.setncattr('std_dev_model', std_dev_model)
+        nc_file.setncattr('std_dev_obs_model', std_dev_obs_model)
+        
+        # Calculate RMSE and add it as an attribute
+        rmse_model_obs = calculate_rmse(data_obs_model_timeaxis, data_model)
+        nc_file.setncattr('rmse_model_obs', rmse_model_obs)
+        
+        # Calculate and add total bias as an attribute
+        total_bias = calculate_total_bias(data_obs_model_timeaxis, data_model)
+        nc_file.setncattr('total_bias', total_bias)
 
     # Use the output_path variable as needed
     print(f"NetCDF file created at: {output_path}")
     
-    # return data_obs_model_timeaxis
-
+# %%
 if __name__ == "__main__":
     
     # define what we're validating...
     
     dir_model = '/mnt/d/Run_False_Bay_2008_2018_SANHO/croco_avg_Y2013M*.nc.1'
     fname_obs = '/mnt/d/DATA-20231010T133411Z-003/DATA/ATAP/Processed/Data_Validation/FalseBaydata_FB001.nc'
-    fname_out = 'OutPut_05_Jan_24.nc'
+    fname_out = 'OutPut_10_Jan_24.nc'
     
     # Output file name and directory
     output_directory = "/mnt/d/Run_False_Bay_2008_2018_SANHO/Validation/ATAP/scripts/"
@@ -294,9 +282,4 @@ if __name__ == "__main__":
                      depth=depth,
                      time_threshold=time_threshold                     
                      )
-    # time_obs, data_obs, long_obs, lat_obs = get_ts_obs(fname_obs, 'temperature')
-    # j,i = find_nearest_point(dir_model+SelectFiles, long_obs, lat_obs)
-    # j,i = find_nearest_point(dir_model+SelectFiles, 19, -35)
-    # time_model, data_model = get_ts(dir_model,var,depth=depth,time_lims=[])
-
     
