@@ -129,7 +129,7 @@ def get_ts(fname, var, lon, lat, ref_date, depth=-1, time_lims=[]):
        The next Function is for matching time axis of both the insitu and model datasets:
 """
 
-def obs_2_new_timeaxis(fname_obs,time_model, time_obs, data_obs,conversionType,var='temp', time_threshold=timedelta(hours=12)):
+def obs_2_new_timeaxis(fname_obs,time_model, time_obs, data_obs,conversionType,var, time_threshold=timedelta(hours=12)):
     print("5. Im in obs_2_new_timeaxis")
     # My Approach:
         # Steps
@@ -151,6 +151,10 @@ def obs_2_new_timeaxis(fname_obs,time_model, time_obs, data_obs,conversionType,v
         # Step 7: Return updated data_obs_model_timeaxis
 
     return data_obs_model_timeaxis
+
+# %% PLotting function
+
+
     
 # %% Statistical analysis section
 decimal = 3
@@ -179,12 +183,12 @@ def calculate_total_bias(obs_data, model_data):
        The next Function is for retrieving all datasets from the previous functions and package them into a netCDF file: 
 """
     
-def get_model_obs_ts(fname,fname_obs,fname_out,output_path,obs,conversionType='D',var='temp',depth=-1,ref_date=None,time_threshold=timedelta(hours=12)):
+def get_model_obs_ts(fname,fname_obs,fname_out,output_path,obs,conversionType,var,depth=-1,ref_date=None,time_threshold=timedelta(hours=12)):
     print("6. Im in get_model_obs_ts")
     # the output of this function is a netcdf file 'fname_out'
     # which will have the model and observations on the same time axis
     
-    obs =  hourly_2_frequency(fname_obs,conversionType)
+    # obs =  hourly_2_frequency(fname_obs,conversionType)
     
     # get the observations time-series
     time_obs, data_obs, long_obs, lat_obs = get_ts_obs(fname_obs,var,obs)   
@@ -193,7 +197,7 @@ def get_model_obs_ts(fname,fname_obs,fname_out,output_path,obs,conversionType='D
     time_model, data_model = get_ts(fname,var,long_obs,lat_obs,ref_date,depth=depth,time_lims=[time_obs[0],time_obs[70]]) # Change the 10 back to -1
  
     # get the observations onto the model time axis
-    data_obs_model_timeaxis = obs_2_new_timeaxis(fname_obs,time_model, time_obs, data_obs, conversionType,time_threshold=time_threshold)
+    data_obs_model_timeaxis = obs_2_new_timeaxis(fname_obs,time_model, time_obs, data_obs, conversionType,var,time_threshold=time_threshold)
     # print(data_obs_model_timeaxis)
         
     # Create a NetCDF File
@@ -269,15 +273,17 @@ if __name__ == "__main__":
     output_path = os.path.join(output_directory, fname_out)
     
     # SelectFiles = "croco_avg_Y2013M*.nc.1"
+    conversionType='D'
     var = 'temp'
     depth=-35
     ref_date = datetime(1990, 1, 1, 0, 0, 0)
     # model_suffix='.1'
     time_threshold=timedelta(hours=12) # used getting observations onto model time axis
+    obs =  hourly_2_frequency(fname_obs,conversionType)
     
     get_model_obs_ts(dir_model,fname_obs,
-                     fname_out,output_path,
-                     var,
+                     fname_out,output_path,obs,conversionType=conversionType,
+                     var=var,
                      ref_date=ref_date,
                      depth=depth,
                      time_threshold=time_threshold                     

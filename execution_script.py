@@ -7,7 +7,7 @@ Created on Fri Jan  5 05:13:58 2024
 """
 import os
 from datetime import datetime,timedelta
-
+from model_evaluation_function import hourly_2_frequency
 from model_evaluation_function import get_model_obs_ts
 
 if __name__ == "__main__":
@@ -26,11 +26,25 @@ if __name__ == "__main__":
     ref_date = datetime(1990, 1, 1, 0, 0, 0)
     time_threshold = timedelta(hours=12)
     
+    
+    # Model frequency parameter. This takes into account the model frequency; in our SWC case it is daily.     
+    """    
+        D/12- denotes 2 HOURLY  conversion
+        D/6 - denotes 4 HOURLY  conversion
+        D/4 - denotes 6 HOURLY conversion
+        D/2 - denotes half-day conversion
+        D - denotes daily conversion
+        W - denotes weekly conversion
+        M - denotes monthly conversion
+    """
+    conversionType='D'
+    obs =  hourly_2_frequency(fname_obs,conversionType)
+    
     # Call the function
     get_model_obs_ts(dir_model, 
                      fname_obs, 
-                     fname_out, output_path,
-                     var, 
+                     fname_out, output_path,obs,conversionType=conversionType,
+                     var=var, 
                      ref_date=ref_date, 
                      depth=depth, 
                      time_threshold=time_threshold)

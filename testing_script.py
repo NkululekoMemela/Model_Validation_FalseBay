@@ -10,7 +10,7 @@ import netCDF4 as nc
 from datetime import datetime
 
 # Open the NetCDF file
-nc_file = nc.Dataset('../OutPut_Msuthu!_Jan_24.nc', 'r')
+nc_file = nc.Dataset('../OutPut_Gambu_Jan_24.nc', 'r')
 
 # List all variables in the NetCDF file
 print("Variables in the NetCDF file:")
