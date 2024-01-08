@@ -10,7 +10,7 @@ import netCDF4 as nc
 from datetime import datetime
 
 # Open the NetCDF file
-nc_file = nc.Dataset('../OutPut_Gambu_Jan_24.nc', 'r')
+nc_file = nc.Dataset('../OutPut_Memela3!_Jan_24.nc', 'r')
 
 # List all variables in the NetCDF file
 print("Variables in the NetCDF file:")
@@ -44,6 +44,8 @@ for variable_name in nc_file.variables.keys():
         print(variable_data[:5])
 
     print()
+    
+    
 
 # Extract global attributes
 std_dev_model = nc_file.getncattr('std_dev_model')

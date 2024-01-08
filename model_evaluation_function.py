@@ -194,7 +194,7 @@ def get_model_obs_ts(fname,fname_obs,fname_out,output_path,obs,conversionType,va
     time_obs, data_obs, long_obs, lat_obs = get_ts_obs(fname_obs,var,obs)   
     
     # get the model time-series
-    time_model, data_model = get_ts(fname,var,long_obs,lat_obs,ref_date,depth=depth,time_lims=[time_obs[0],time_obs[70]]) # Change the 10 back to -1
+    time_model, data_model = get_ts(fname,var,long_obs,lat_obs,ref_date,depth=depth,time_lims=[time_obs[0],time_obs[-1]]) # Change the 10 back to -1
  
     # get the observations onto the model time axis
     data_obs_model_timeaxis = obs_2_new_timeaxis(fname_obs,time_model, time_obs, data_obs, conversionType,var,time_threshold=time_threshold)
