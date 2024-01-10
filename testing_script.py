@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 """
 Created on Thu Jan  4 14:35:41 2024
-
 @author: nkululeko
 """
 
@@ -42,11 +41,9 @@ for variable_name in nc_file.variables.keys():
         # Print the top 5 data points for other variables
         print(f"Top 5 data points for variable '{variable_name}':")
         print(variable_data[:5])
-
+        
     print()
     
-    
-
 # Extract global attributes
 std_dev_model = nc_file.getncattr('std_dev_model')
 std_dev_obs_model = nc_file.getncattr('std_dev_obs_model')

@@ -15,10 +15,8 @@ import netCDF4 as nc
 from datetime import datetime
 import cartopy.crs as ccrs
 import cartopy
-import numpy as np
-import xarray as xr
-import numpy as np
-import xarray as xr
+import pandas as pd
+from pandas.plotting import table
 
 # %%
 
@@ -59,7 +57,8 @@ model_in_situ_ano_rmse = sqrt(mean_squared_error(temp_ano_corr, model_ano_corr))
 
 #%%
 #Station Points at dep
-dataset_path = '/mnt/d/Run_False_Bay_2008_2018_SANHO/Validation/ATAP/scripts/'
+savepath = '/mnt/d/Run_False_Bay_2008_2018_SANHO/Validation/ATAP/scripts/'
+
 
 fig = plt.figure(figsize=(10, 5),facecolor='white')
 
@@ -85,10 +84,10 @@ gl.right_labels=False
 gl.xlines = True
 gl.ylines = True
 
-#plt.savefig(savepath+'Timeseries_location.png')
+plt.savefig(savepath+'Timeseries_location.png')
        
 # %%
-
+savename = 'Model_evaluation.png'
 fig, ax = plt.subplots(figsize=(12, 15),nrows=3, ncols=1)
 
 ax[0].plot(time_variable ,data_obs_model_timeaxis,label='ATAP in situ', color='blue');
@@ -117,4 +116,42 @@ ax[2].set_xlabel('Time')
 ax[2].set_ylabel('SST') 
 
 fig.tight_layout()
-#plt.savefig(savepath+savename)
+plt.savefig(savepath+savename)
+
+
+# %% Creating a statistical table
+savename_tbl = 'Model_evaluation_statistics_Tbl.png'
+# Create a pandas DataFrame
+table_data = {
+    'Statistic': ['Correlation Model-Obs', 'Std Dev Model', 'Std Dev Obs-Model', 'RMSE Model-Obs', 'Total Bias'],
+    'Value': [ds.correlation_model_obs, ds.std_dev_model, ds.std_dev_obs_model, ds.rmse_model_obs, ds.total_bias]
+}
+
+table_df = pd.DataFrame(table_data)
+
+# Update the DataFrame index to start at 1
+table_df.index = table_df.index + 1
+
+# Increase figure size for better readability
+fig, ax = plt.subplots(figsize=(12, 4))
+
+# Plot the DataFrame as a table with left-aligned text and wider columns
+ax.axis('off')
+tbl = table(ax, table_df, loc='center', cellLoc='left', colWidths=[0.4, 0.4], rowLoc='center', fontsize=12)
+
+# Adjust the row heights
+for i, key in enumerate(tbl.get_celld().keys()):
+    cell = tbl[key]
+    cell.set_fontsize(12)
+    cell.set_height(0.07)  # Adjust the height as needed
+    
+    # Add a title to the table
+plt.title("Table 1: Model Evaluation Statistics over ATAP Data in False Bay", fontsize=14, y=0.75)
+
+# Save the figure as a PNG file
+fig.savefig('output_table.png', bbox_inches='tight', dpi=300)  # Increased DPI for better quality
+
+# Display the table
+plt.savefig(savepath+savename_tbl)
+plt.show()
+
