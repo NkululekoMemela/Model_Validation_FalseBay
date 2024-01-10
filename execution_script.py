@@ -13,7 +13,7 @@ if __name__ == "__main__":
     # Define the input parameters
     dir_model = '/mnt/d/Run_False_Bay_2008_2018_SANHO/croco_avg_Y2013M*.nc.1'
     fname_obs = '/mnt/d/DATA-20231010T133411Z-003/DATA/ATAP/Processed/Data_Validation/FalseBaydata_FB001.nc'
-    fname_out = 'OutPut_Memela4!_Jan_24.nc'
+    fname_out = 'OutPut_Memela10!_Jan_24.nc'
 
     # Output file name and directory
     output_directory = "/mnt/d/Run_False_Bay_2008_2018_SANHO/Validation/ATAP/scripts/"

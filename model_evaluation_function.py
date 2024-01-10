@@ -17,6 +17,7 @@ directory_path = '/home/nkululeko/somisana/toolkit/cli/applications/croco'
 sys.path.append(directory_path)
 import postprocess as post
 import netCDF4 as nc
+from netCDF4 import Dataset
 import pandas as pd
 import os
 from datetime import datetime,timedelta
@@ -154,7 +155,21 @@ def obs_2_new_timeaxis(fname_obs,time_model, time_obs, data_obs,conversionType,v
 
 # %% PLotting function
 
+# def calculate_anomaly(data_obs,time_obs):
+#     # Calculate standard deviation, ignoring NaN values
+#     # Convert time_obs to xarray DataArray for compatibility
+#     time_obs_da = xr.DataArray(time_obs, dims='time')
 
+#     # Perform calculations using time_obs
+#     model_ano = data_obs - data_obs.mean(time_obs_da)
+#     model_clim = data_obs.mean(time_obs_da)
+
+#     # Now you can use these calculated variables as needed
+#     print("Model Anomaly:", model_ano)
+#     print("Model Climatology:", model_clim)
+#     return model_ano, model_clim
+
+    
     
 # %% Statistical analysis section
 decimal = 3
@@ -188,8 +203,6 @@ def get_model_obs_ts(fname,fname_obs,fname_out,output_path,obs,conversionType,va
     # the output of this function is a netcdf file 'fname_out'
     # which will have the model and observations on the same time axis
     
-    # obs =  hourly_2_frequency(fname_obs,conversionType)
-    
     # get the observations time-series
     time_obs, data_obs, long_obs, lat_obs = get_ts_obs(fname_obs,var,obs)   
     
@@ -199,8 +212,8 @@ def get_model_obs_ts(fname,fname_obs,fname_out,output_path,obs,conversionType,va
     # get the observations onto the model time axis
     data_obs_model_timeaxis = obs_2_new_timeaxis(fname_obs,time_model, time_obs, data_obs, conversionType,var,time_threshold=time_threshold)
     # print(data_obs_model_timeaxis)
-        
-    # Create a NetCDF File
+
+    # Create a NetCDF file
     with nc.Dataset(output_path, 'w', format='NETCDF4') as nc_file:
         # Create dimensions
         nc_file.createDimension('time', len(time_model))
@@ -216,12 +229,13 @@ def get_model_obs_ts(fname,fname_obs,fname_out,output_path,obs,conversionType,va
         obs_model_var = nc_file.createVariable('data_obs_model_timeaxis', 'f4', ('time', 'latitude', 'longitude'))
     
         # Convert datetime objects to Unix timestamps (floats)
-        float_time_model = np.array([dt.timestamp() for dt in time_model], dtype=float)
+        float_time_model = np.array([dt.timestamp() for dt in time_model], dtype=int)
         # print(float_time_model)
+        # Set attributes for time variable
         
         # Convert each float timestamp to datetime
-        time_model = [datetime.fromtimestamp(float_time) for float_time in float_time_model]
-        for dt in time_model:
+        # time_model = [datetime.fromtimestamp(float_time) for float_time in float_time_model]
+        for dt in float_time_model:
             print(dt)
     
         # Assign data to variables
@@ -230,9 +244,12 @@ def get_model_obs_ts(fname,fname_obs,fname_out,output_path,obs,conversionType,va
         lon_var[:] = long_obs
         model_var[:, :, :] = data_model
         obs_model_var[:, :, :] = data_obs_model_timeaxis
-    
+ 
         # Add attributes if needed
-        time_var.units = 'days'
+        time_var.units = 'seconds since 1970-01-01 00:00:00'    
+        time_var.calendar = 'standard'        
+        time_var.long_name = 'time'
+        # time_var.units = 'days'
         lat_var.units = 'latitude'
         lon_var.units = 'longitude'
         model_var.units = 'degrees Celsius'
@@ -255,9 +272,14 @@ def get_model_obs_ts(fname,fname_obs,fname_out,output_path,obs,conversionType,va
         # Calculate and add total bias as an attribute
         total_bias = calculate_total_bias(data_obs_model_timeaxis, data_model)
         nc_file.setncattr('total_bias', total_bias)
+        
+        # Calculate anomaly and climatology
+        # model_ano = calculate_anomaly(data_obs,time_obs)
+        # model_clim = calculate_anomaly(data_obs,time_obs)
+        # nc_file.setncattr('anomaly', model_ano)
+        # nc_file.setncattr('climatology', model_clim)
+    
 
-    # Use the output_path variable as needed
-    print(f"NetCDF file created at: {output_path}")
     
 # %%
 if __name__ == "__main__":
@@ -266,7 +288,7 @@ if __name__ == "__main__":
     
     dir_model = '/mnt/d/Run_False_Bay_2008_2018_SANHO/croco_avg_Y2013M*.nc.1'
     fname_obs = '/mnt/d/DATA-20231010T133411Z-003/DATA/ATAP/Processed/Data_Validation/FalseBaydata_FB001.nc'
-    fname_out = 'OutPut_10_Jan_24.nc'
+    fname_out = 'OutPut_12_Jan_24.nc'
     
     # Output file name and directory
     output_directory = "/mnt/d/Run_False_Bay_2008_2018_SANHO/Validation/ATAP/scripts/"
