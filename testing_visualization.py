@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 """
 Created on Mon Jan  8 22:22:08 2024
-
 @author: nkululeko
 """
 import os
@@ -18,44 +17,25 @@ import cartopy.crs as ccrs
 import cartopy
 import numpy as np
 import xarray as xr
-
-# %%
-
-dataset_path = '/mnt/d/Run_False_Bay_2008_2018_SANHO/Validation/ATAP/scripts/OutPut_Memela10!_Jan_24.nc'
-ds = xr.open_dataset(dataset_path)
-
-# Given time array
-time_array = ds.time
-
-# Convert timedelta64 array to datetime64
-datetime_values = np.datetime64('1990-01-01') + time_array.astype('timedelta64[s]')
-
-# Create a new xarray DataArray with datetime values
-datetime_array = xr.DataArray(
-    datetime_values,
-    dims='time',
-    coords={'time': time_array['time']},
-    attrs={'units': 'ns', 'calendar': 'gregorian'}
-)
-
-print(datetime_array)
-
-# %%
 import numpy as np
 import xarray as xr
 
+# %%
+
 dataset_path = '/mnt/d/Run_False_Bay_2008_2018_SANHO/Validation/ATAP/scripts/OutPut_Memela10!_Jan_24.nc'
 ds = xr.open_dataset(dataset_path)
 
-time_array = ds.time
+time_variable = ds.time
+data_model = ds.data_model.squeeze()
+data_obs_model_timeaxis = ds.data_obs_model_timeaxis.squeeze()
 
 # %% Anomalies and clim
 
-model_ano = ds.data_model - ds.data_model.mean("time")
-model_clim =  ds.data_model.mean("time")
+model_ano = data_model.groupby("time.month") - data_model.groupby("time.month").mean("time")
+model_clim =  data_model.groupby("time.month").mean("time")
 
-sst_ano =  ds.data_obs_model_timeaxis - ds.data_obs_model_timeaxis.mean("time")
-sst_clim =  ds.data_obs_model_timeaxis.mean("time")
+sst_ano =  data_obs_model_timeaxis.groupby("time.month") - data_obs_model_timeaxis.groupby("time.month").mean("time")
+sst_clim =  data_obs_model_timeaxis.groupby("time.month").mean("time")
 
 # %% Correltation and rmse 
 #loading values for dask
@@ -111,7 +91,7 @@ gl.ylines = True
 
 fig, ax = plt.subplots(figsize=(12, 15),nrows=3, ncols=1)
 
-ax[0].plot(time_variable ,data_obs_model_timeaxis,label='ATAP in situ');
+ax[0].plot(time_variable ,data_obs_model_timeaxis,label='ATAP in situ', color='blue');
 ax[0].plot(data_model.time,data_model,'--',label='SCC_model', color='red', linewidth=2.5, linestyle='-');
 ax[0].text(0.01, 0.95, '\n SCC_model r='+str(np.round(model_in_situ_corr,2)) +'\n RMSE='+str(np.round(model_in_situ_rmse,2))
             , fontsize=16,
