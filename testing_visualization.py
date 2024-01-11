@@ -19,7 +19,7 @@ import pandas as pd
 from pandas.plotting import table
 
 # %%
-filename = 'GILES2_'+'FalseBay_FB001.nc'
+filename = 'GILES7_'+'FalseBay_FB001.nc'
 savename = 'Model_evaluation.png'
 savepath = '/mnt/d/DATA-20231010T133411Z-003/DATA/ATAP/Processed/Data_Validation/'
 # dataset_path = '/mnt/d/Run_False_Bay_2008_2018_SANHO/Validation/ATAP/scripts/OutPut_Memela10!_Jan_24.nc'

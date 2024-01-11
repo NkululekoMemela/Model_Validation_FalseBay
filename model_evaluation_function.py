@@ -34,37 +34,37 @@ from datetime import datetime,timedelta
     M - denotes monthly conversion
 """
 
-def hourly_2_frequency(fname_obs, conversionType):
-    print("1. Im in hourly_2_frequency")
-    # Load xarray dataset
-    obs = xr.open_dataset(fname_obs)
-    if conversionType == 'D/12':
-        return obs.resample(time="2H").mean()
-    if conversionType == 'D/6':
-        return obs.resample(time="4H").mean()
-    if conversionType == 'D/4':
-        return obs.resample(time="6H").mean()
-    if conversionType == 'D/2':
-        return obs.resample(time="12").mean()
-    if conversionType == 'D':
-        return obs.resample(time="1D").mean()
-    if conversionType == 'W':
-        return obs.resample(time="1W").mean()
-    if conversionType == 'M':
-        return obs.resample(time="1M").mean()
-    return obs
+# def hourly_2_frequency(fname_obs, conversionType):
+#     print("1. Im in hourly_2_frequency")
+#     # Load xarray dataset
+#     obs = xr.open_dataset(fname_obs)
+#     if conversionType == 'D/12':
+#         return obs.resample(time="2H").mean()
+#     if conversionType == 'D/6':
+#         return obs.resample(time="4H").mean()
+#     if conversionType == 'D/4':
+#         return obs.resample(time="6H").mean()
+#     if conversionType == 'D/2':
+#         return obs.resample(time="12").mean()
+#     if conversionType == 'D':
+#         return obs.resample(time="1D").mean()
+#     if conversionType == 'W':
+#         return obs.resample(time="1W").mean()
+#     if conversionType == 'M':
+#         return obs.resample(time="1M").mean()
+#     return obs
 
 # %%
 """
        The next Function is for loading IN SITU time series:
 """
-def get_ts_obs(fname_obs, var, obs):
+def get_ts_obs(fname_obs, var):
     print("2. Im in get_ts_obs")
     # A generic function like this will work if we process all the observations
     # from different sources into the same format
     # Cleaning out duplicates from the dataset
     # obs = post.get_ds(fname_obs)
-    # obs = xr.open_dataset(fname_obs)
+    obs = xr.open_dataset(fname_obs)
     data_obs = np.squeeze(obs[var].values)
     # Temperature is the data observation
     time_obs = obs.time.values
@@ -130,27 +130,38 @@ def get_ts(fname, var, lon, lat, ref_date, depth=-1, time_lims=[]):
        The next Function is for matching time axis of both the insitu and model datasets:
 """
 
-def obs_2_new_timeaxis(fname_obs,time_model, time_obs, data_obs,conversionType,var, time_threshold=timedelta(hours=12)):
+def obs_2_new_timeaxis(fname_obs,time_model,model_frequency,var):
     print("5. Im in obs_2_new_timeaxis")
     # My Approach:
         # Steps
+        
+        #         return 
+    # obs = fname_obs.resample(time=model_frequency).mean()
+    obs = xr.open_dataset(fname_obs)
+    obs_formatted = obs.resample(time=model_frequency, base=12).mean()
+    data_obs = np.squeeze(obs_formatted[var].values)
+    time_obs = obs_formatted.time.values
+    time_obs = time_obs.astype('datetime64[s]').astype(datetime)
         # Step 1: Convert the hourly data of time_obs to daily data. Or more specifically to the model freq.
-    obs =  hourly_2_frequency(fname_obs,conversionType)
         # Step 2: Load observation time series after making it daily.
-    time_obs, data_obs, long_obs, lat_obs = get_ts_obs(fname_obs,var,obs)
         # Step 3: Create data_obs_model_timeaxis and set it to be data_obs
     data_obs_model_timeaxis = [None for i in range(len(time_model))]
-        # Step 4: Loop through the dataset of obs and add thrashold to make it match time_model data.  
-    formatted_time_obs = [(time_obs_now+time_threshold) for time_obs_now in time_obs] 
+        # Step 4: Loop through the dataset of obs and add thrashold to make it match time_model data. 
+        
+    # Convert the NumPy array to a list of datetime objects
+    formatted_time_obs = time_obs.tolist()
+    
+    print(formatted_time_obs)
 
     for index_mod, time_model_now in enumerate(time_model):
         # Step 5: Check the time component in time_obs and in each record if it is contained in time_obs then.
         if time_model_now in formatted_time_obs:            
         # Step 6: If contained then replace that time value in with a value in time_model in the same index.
             # index_mod = time_model.index(time_model_now)
+            # index_obs =  np.where(time_obs==time_model_now)
             index_obs = formatted_time_obs.index(time_model_now)
             data_obs_model_timeaxis[index_mod] = data_obs[index_obs]
-        # Step 7: Return updated data_obs_model_timeaxis
+       
 
     return data_obs_model_timeaxis
 
@@ -199,19 +210,19 @@ def calculate_total_bias(obs_data, model_data):
        The next Function is for retrieving all datasets from the previous functions and package them into a netCDF file: 
 """
     
-def get_model_obs_ts(fname,fname_obs,fname_out,output_path,obs,conversionType,var,depth=-1,ref_date=None,time_threshold=timedelta(hours=12)):
+def get_model_obs_ts(fname,fname_obs,fname_out,output_path,model_frequency,var,depth=-1,ref_date=None):
     print("6. Im in get_model_obs_ts")
     # the output of this function is a netcdf file 'fname_out'
     # which will have the model and observations on the same time axis
     
     # get the observations time-series
-    time_obs, data_obs, long_obs, lat_obs = get_ts_obs(fname_obs,var,obs)   
+    time_obs, data_obs, long_obs, lat_obs = get_ts_obs(fname_obs,var)   
     
     # get the model time-series
     time_model, data_model = get_ts(fname,var,long_obs,lat_obs,ref_date,depth=depth,time_lims=[time_obs[0],time_obs[-1]]) # Change the 10 back to -1
  
     # get the observations onto the model time axis
-    data_obs_model_timeaxis = obs_2_new_timeaxis(fname_obs,time_model, time_obs, data_obs, conversionType,var,time_threshold=time_threshold)
+    data_obs_model_timeaxis = obs_2_new_timeaxis(fname_obs,time_model, model_frequency,var)
     # print(data_obs_model_timeaxis)
 
     # Create a NetCDF file
@@ -288,30 +299,25 @@ def get_model_obs_ts(fname,fname_obs,fname_out,output_path,obs,conversionType,va
 # %%
 if __name__ == "__main__":
     
-    # define what we're validating...
-    
-    dir_model = '/mnt/d/Run_False_Bay_2008_2018_SANHO/croco_avg_Y2013M*.nc.1'
-    fname_obs = '/mnt/d/DATA-20231010T133411Z-003/DATA/ATAP/Processed/Data_Validation/FalseBaydata_FB001.nc'
-    fname_out = 'OutPut_12_Jan_24.nc'
-    
+    # Define the input parameters
+    dir_model = '/mnt/d/Run_False_Bay_2008_2018_SANHO/croco_avg_Y201*.nc.1'
+    fname_obs = '/mnt/d/DATA-20231010T133411Z-003/DATA/ATAP/Processed/Processed_Station_Files/FalseBay_FB001.nc'
+    fname_out = 'Validation_'+'FalseBay_FB001.nc'
+
     # Output file name and directory
-    output_directory = "/mnt/d/Run_False_Bay_2008_2018_SANHO/Validation/ATAP/scripts/"
+    output_directory = '/mnt/d/DATA-20231010T133411Z-003/DATA/ATAP/Processed/Data_Validation/'
     output_path = os.path.join(output_directory, fname_out)
     
     # SelectFiles = "croco_avg_Y2013M*.nc.1"
-    conversionType='D'
+    model_frequency='D'
     var = 'temp'
     depth=-35
     ref_date = datetime(1990, 1, 1, 0, 0, 0)
-    # model_suffix='.1'
-    time_threshold=timedelta(hours=12) # used getting observations onto model time axis
-    obs =  hourly_2_frequency(fname_obs,conversionType)
     
     get_model_obs_ts(dir_model,fname_obs,
-                     fname_out,output_path,obs,conversionType=conversionType,
+                     fname_out,output_path,model_frequency=model_frequency,
                      var=var,
                      ref_date=ref_date,
-                     depth=depth,
-                     time_threshold=time_threshold                     
+                     depth=depth                    
                      )
     
