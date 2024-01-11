@@ -11,12 +11,12 @@ from model_evaluation_function import get_model_obs_ts
 
 if __name__ == "__main__":
     # Define the input parameters
-    dir_model = '/mnt/d/Run_False_Bay_2008_2018_SANHO/croco_avg_Y2013M*.nc.1'
-    fname_obs = '/mnt/d/DATA-20231010T133411Z-003/DATA/ATAP/Processed/Data_Validation/FalseBaydata_FB001.nc'
-    fname_out = 'OutPut_Memela10!_Jan_24.nc'
+    dir_model = '/mnt/d/Run_False_Bay_2008_2018_SANHO/croco_avg_Y2013M1.nc.1'
+    fname_obs = '/mnt/d/DATA-20231010T133411Z-003/DATA/ATAP/Processed/Processed_Station_Files/FalseBay_FB001.nc'
+    fname_out = 'GILES2_'+'FalseBay_FB001.nc'
 
     # Output file name and directory
-    output_directory = "/mnt/d/Run_False_Bay_2008_2018_SANHO/Validation/ATAP/scripts/"
+    output_directory = '/mnt/d/DATA-20231010T133411Z-003/DATA/ATAP/Processed/Data_Validation/'
     output_path = os.path.join(output_directory, fname_out)
 
     # Other parameters

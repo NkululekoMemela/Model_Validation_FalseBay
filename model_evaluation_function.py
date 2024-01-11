@@ -135,20 +135,21 @@ def obs_2_new_timeaxis(fname_obs,time_model, time_obs, data_obs,conversionType,v
     # My Approach:
         # Steps
         # Step 1: Convert the hourly data of time_obs to daily data. Or more specifically to the model freq.
-    obs =  hourly_2_frequency(fname_obs,conversionType='D')
+    obs =  hourly_2_frequency(fname_obs,conversionType)
         # Step 2: Load observation time series after making it daily.
     time_obs, data_obs, long_obs, lat_obs = get_ts_obs(fname_obs,var,obs)
         # Step 3: Create data_obs_model_timeaxis and set it to be data_obs
     data_obs_model_timeaxis = [None for i in range(len(time_model))]
         # Step 4: Loop through the dataset of obs and add thrashold to make it match time_model data.  
-    formatted_time_obs = [(obz+time_threshold) for obz in time_obs] 
+    formatted_time_obs = [(time_obs_now+time_threshold) for time_obs_now in time_obs] 
 
-    for obz in time_model:
+    for index_mod, time_model_now in enumerate(time_model):
         # Step 5: Check the time component in time_obs and in each record if it is contained in time_obs then.
-        if obz in formatted_time_obs:            
+        if time_model_now in formatted_time_obs:            
         # Step 6: If contained then replace that time value in with a value in time_model in the same index.
-            index = time_model.index(obz)
-            data_obs_model_timeaxis[index] = data_obs[index]
+            # index_mod = time_model.index(time_model_now)
+            index_obs = formatted_time_obs.index(time_model_now)
+            data_obs_model_timeaxis[index_mod] = data_obs[index_obs]
         # Step 7: Return updated data_obs_model_timeaxis
 
     return data_obs_model_timeaxis
@@ -254,6 +255,9 @@ def get_model_obs_ts(fname,fname_obs,fname_out,output_path,obs,conversionType,va
         lon_var.units = 'longitude'
         model_var.units = 'degrees Celsius'
         obs_model_var.units = 'degrees Celsius'
+        
+        # data_model_nonan=data_model[not np.isnan(data_obs_model_timeaxis)]
+        # data_obs_model_timeaxis_nonan=data_obs_model_timeaxis[not np.isnan(data_obs_model_timeaxis)]
         
         # Calculate and add correlations as attributes
         correlation_model_obs = calculate_correlation(data_obs_model_timeaxis, data_model)

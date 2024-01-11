@@ -19,9 +19,12 @@ import pandas as pd
 from pandas.plotting import table
 
 # %%
-
-dataset_path = '/mnt/d/Run_False_Bay_2008_2018_SANHO/Validation/ATAP/scripts/OutPut_Memela10!_Jan_24.nc'
-ds = xr.open_dataset(dataset_path)
+filename = 'GILES2_'+'FalseBay_FB001.nc'
+savename = 'Model_evaluation.png'
+savepath = '/mnt/d/DATA-20231010T133411Z-003/DATA/ATAP/Processed/Data_Validation/'
+# dataset_path = '/mnt/d/Run_False_Bay_2008_2018_SANHO/Validation/ATAP/scripts/OutPut_Memela10!_Jan_24.nc'
+dataset_path = '/mnt/d/DATA-20231010T133411Z-003/DATA/ATAP/Processed/Data_Validation/'
+ds = xr.open_dataset(dataset_path+filename)
 
 time_variable = ds.time
 data_model = ds.data_model.squeeze()
@@ -57,7 +60,7 @@ model_in_situ_ano_rmse = sqrt(mean_squared_error(temp_ano_corr, model_ano_corr))
 
 #%%
 #Station Points at dep
-savepath = '/mnt/d/Run_False_Bay_2008_2018_SANHO/Validation/ATAP/scripts/'
+
 
 
 fig = plt.figure(figsize=(10, 5),facecolor='white')
@@ -84,9 +87,9 @@ gl.right_labels=False
 gl.xlines = True
 gl.ylines = True
 
-plt.savefig(savepath+'Timeseries_location.png')
+plt.savefig(savepath+filename[:-3]+'_'+'Timeseries_location.png')
        
-# %%
+# %% Model evaluation 
 savename = 'Model_evaluation.png'
 fig, ax = plt.subplots(figsize=(12, 15),nrows=3, ncols=1)
 
@@ -112,11 +115,11 @@ ax[2].plot(sst_clim,label='ATAP in situ', color='blue', linewidth=2.5, linestyle
 ax[2].plot(model_clim,'--',label='SCC_model', color='red', linewidth=2.5, linestyle='-');
 ax[2].set_title('SCC_model and '+str(dataset_path.split("/")[-1].split("_")[0])+' \n ATAP in situ SST climatology ',fontsize=18)
 ax[2].legend(loc="upper right")
-ax[2].set_xlabel('Time')
+ax[2].set_xlabel('Time (months)')
 ax[2].set_ylabel('SST') 
 
 fig.tight_layout()
-plt.savefig(savepath+savename)
+plt.savefig(savepath+filename[:-3]+'_'+savename)
 
 
 # %% Creating a statistical table
