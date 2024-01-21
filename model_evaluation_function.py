@@ -17,58 +17,32 @@ directory_path = '/home/nkululeko/somisana/toolkit/cli/applications/croco'
 sys.path.append(directory_path)
 import postprocess as post
 import netCDF4 as nc
-from netCDF4 import Dataset
-import pandas as pd
+# from netCDF4 import Dataset
+# import pandas as pd
 import os
-from datetime import datetime,timedelta
+# from datetime import datetime,timedelta
 # import your libraries here
 
-# %% The next Function is for matching time frequencies of both the insitu and model datasets:
-"""    
-    D/12- denotes 2 HOURLY  conversion
-    D/6 - denotes 4 HOURLY  conversion
-    D/4 - denotes 6 HOURLY conversion
-    D/2 - denotes half-day conversion
-    D - denotes daily conversion
-    W - denotes weekly conversion
-    M - denotes monthly conversion
-"""
-
-# def hourly_2_frequency(fname_obs, conversionType):
-#     print("1. Im in hourly_2_frequency")
-#     # Load xarray dataset
-#     obs = xr.open_dataset(fname_obs)
-#     if conversionType == 'D/12':
-#         return obs.resample(time="2H").mean()
-#     if conversionType == 'D/6':
-#         return obs.resample(time="4H").mean()
-#     if conversionType == 'D/4':
-#         return obs.resample(time="6H").mean()
-#     if conversionType == 'D/2':
-#         return obs.resample(time="12").mean()
-#     if conversionType == 'D':
-#         return obs.resample(time="1D").mean()
-#     if conversionType == 'W':
-#         return obs.resample(time="1W").mean()
-#     if conversionType == 'M':
-#         return obs.resample(time="1M").mean()
-#     return obs
 
 # %%
 """
        The next Function is for loading IN SITU time series:
+           1. obs       : uses the given filename to open the file using xarray funtion
+           2. data_obs  : uses obs[var] extract from postprocess stored in somisana toolkit; 
+                          it retrieves obs data array
+           3. time_obs  : uses the traditional dot method to retrieve time array from obs
+                          it is then changed to a datetime64 datatype to ensure compliance with model time 
+           4. lat_obs   : uses the dot method to extract latitude values. the same applieas to long_obs
+           
 """
 def get_ts_obs(fname_obs, var):
     print("2. Im in get_ts_obs")
     # A generic function like this will work if we process all the observations
     # from different sources into the same format
     # Cleaning out duplicates from the dataset
-    # obs = post.get_ds(fname_obs)
     obs = xr.open_dataset(fname_obs)
     data_obs = np.squeeze(obs[var].values)
-    # Temperature is the data observation
     time_obs = obs.time.values
-    # time_obs = pd.to_datetime(time_obs)
     time_obs = time_obs.astype('datetime64[s]').astype(datetime)
     long_obs = obs.longitude.values
     lat_obs = obs.latitude.values
@@ -77,7 +51,13 @@ def get_ts_obs(fname_obs, var):
 
 # %%
 """
-       The next METHOD is for finding the nearest point to insitu data in the model:
+        The next METHOD is for finding the nearest point to insitu data in the model:
+            1. The if statement in this function is intended to apply in cases where there are 
+                multiple files to read in the model. It instructs to only read the first one
+            2. with post.get_ds(fname) as ds: Calculate the distance between model and insitu lats and lons  
+                at all grid points. If you pay special attention you will see that it is indeed a 
+                distance formular in the form of d = sqrt(x^2+y^2) expanded to d = sqrt((x1-x2)^2+(y1-y2)^2)
+            3. min_index findes indices j,i which represents the minimum distance between model and insitu points
 """
 
 def find_nearest_point(fname, Longi, Latit):
@@ -89,7 +69,7 @@ def find_nearest_point(fname, Longi, Latit):
         fname = glob(fname)[0]
 
     with post.get_ds(fname) as ds:
-        # Calculate the distance between (Longi, lat0) and all grid points
+        # Calculate the distance between (Longi, Latit) and all grid points
         distance = ((ds['lon_rho'].values - Longi) ** 2 +
                     (ds['lat_rho'].values - Latit) ** 2) ** 0.5
 
@@ -100,11 +80,27 @@ def find_nearest_point(fname, Longi, Latit):
 
     return j, i
 
+
+
 # %%
 """
        The next Function is for getting MODEL time series:
+           1. time_model is computed using the get_time function from somisana toolkit called postprocess
+               this model time is extracted based on time limits set by observations time-span that overlaps 
+               the model time span. fname taken in by time model is the model name.
+           2. j, i = find_nearest_point(fname, lon, lat) : finds the nearest point in the model to the insitu
+               lon, lat extracted from the insitu file.
+           3. the i_shifted or j_shifted represents the possible shift a user can physically input in order to 
+               offset as the new supposed point of observation so that the model will find a point nearest to 
+               it for model evaluation. The reason for this shift is a possible bathymetry mismatch between 
+               model and station observation which results in nans if the model is shallower than the insitu
+           4. the data_model function call extracts data in the location of the model that is nearest to the 
+               insitu dataset based on the j and i indices. In the case where the bathymetry becomes a factor
+               as explained above; then the data_model extracts at the shifted indices.
+           5. lat_mod and lon_mod are extracted with the aim of using them for plotting model location closest
+               to the insitu data with availability of corrasponding z-level to the insitu data later
 """
-def get_ts(fname, var, lon, lat, ref_date, depth=-1, time_lims=[]):
+def get_ts(fname, var, lon, lat, ref_date, depth=-1,i_shifted=0,j_shifted=0, time_lims=[]):
     print("4. Im in get_ts")
     # this function will eventually get moved into the postprocess.py file of the somisana repo
     # which is why I'd call it just 'get_ts', as it will be obvious that it relates to croco model output
@@ -113,9 +109,15 @@ def get_ts(fname, var, lon, lat, ref_date, depth=-1, time_lims=[]):
     # Convert datetime64 array to datetime.datetime objects
 
     time_model = post.get_time(fname, ref_date, time_lims=time_lims)
-
+    
+    # if lat_extract is not None:
+    #     j, i = find_nearest_point(fname, lon, lat_extract)
+    # else:
     j, i = find_nearest_point(fname, lon, lat)
-
+        
+    i = i+i_shifted
+    j = j+j_shifted
+        
     data_model = post.get_var(fname, var,
                               tstep=time_lims,
                               level=depth,
@@ -123,7 +125,10 @@ def get_ts(fname, var, lon, lat, ref_date, depth=-1, time_lims=[]):
                               xi=i,
                               ref_date=ref_date)
     
-    return time_model, data_model
+    lat_mod =  post.get_var(fname,"lat_rho",eta=j,xi=i)
+    lon_mod =  post.get_var(fname,"lon_rho",eta=j,xi=i)
+        
+    return time_model, data_model,lat_mod,lon_mod
 
 # %%
 """
@@ -151,7 +156,7 @@ def obs_2_new_timeaxis(fname_obs,time_model,model_frequency,var):
     # Convert the NumPy array to a list of datetime objects
     formatted_time_obs = time_obs.tolist()
     
-    print(formatted_time_obs)
+    # print(formatted_time_obs)
 
     for index_mod, time_model_now in enumerate(time_model):
         # Step 5: Check the time component in time_obs and in each record if it is contained in time_obs then.
@@ -164,24 +169,7 @@ def obs_2_new_timeaxis(fname_obs,time_model,model_frequency,var):
        
 
     return data_obs_model_timeaxis
-
-# %% PLotting function
-
-# def calculate_anomaly(data_obs,time_obs):
-#     # Calculate standard deviation, ignoring NaN values
-#     # Convert time_obs to xarray DataArray for compatibility
-#     time_obs_da = xr.DataArray(time_obs, dims='time')
-
-#     # Perform calculations using time_obs
-#     model_ano = data_obs - data_obs.mean(time_obs_da)
-#     model_clim = data_obs.mean(time_obs_da)
-
-#     # Now you can use these calculated variables as needed
-#     print("Model Anomaly:", model_ano)
-#     print("Model Climatology:", model_clim)
-#     return model_ano, model_clim
-
-    
+  
     
 # %% Statistical analysis section
 decimal = 3
@@ -205,22 +193,84 @@ def calculate_total_bias(obs_data, model_data):
     bias = round(np.nanmean(obs_data - model_data),decimal)
     return bias
 
+def calculate_min_mean_max(obs_data, model_data):
+    # Calculate model_mean, ignoring NaN values
+    model_mean = round(np.nanmean(model_data),decimal)
+    # Calculate obs_mean, ignoring NaN values
+    obs_mean = round(np.nanmean(obs_data),decimal)
+    # Calculate model_min, ignoring NaN values
+    model_min = round(np.min(model_data),decimal)
+    # Calculate obs_min, ignoring NaN values
+    obs_min = round(np.nanmin(obs_data),decimal)
+    # Calculate model_max, ignoring NaN values
+    model_max = round(np.max(model_data),decimal)
+    # Calculate obs_max, ignoring NaN values
+    obs_max = round(np.nanmax(obs_data),decimal)
+    return model_mean,obs_mean,model_min,obs_min,model_max,obs_max
+
+# def calculate_seasonal_means(obs_data, model_data, time_model):
+#     """
+#     Calculate seasonal means for JFM, AMJ, JAS, and OND.
+
+#     Parameters:
+#     - obs_data: List or NumPy array with observed data and a datetime-like structure
+#     - model_data: List or NumPy array with model data and a datetime-like structure
+#     - time_model: List or NumPy array indicating the time model for resampling (e.g., [1, 2, 3, 4])
+
+#     Returns:
+#     - JFM_mean, AMJ_mean, JAS_mean, OND_mean: Mean values for each season
+#     """
+
+#     # Convert lists to NumPy arrays
+#     obs_data = np.array(obs_data)
+#     model_data = np.array(model_data)
+#     time_model = np.array(time_model)
+
+#     # Resample data to custom seasonal frequency and calculate mean for each season
+#     obs_means = np.mean(obs_data.reshape(-1, len(time_model)), axis=1)
+#     model_means = np.mean(model_data.reshape(-1, len(time_model)), axis=1)
+
+#     # Map numerical indices to season labels
+#     season_labels = {1: 'JFM', 2: 'AMJ', 3: 'JAS', 4: 'OND'}
+
+#     # Get mean values for each season
+#     JFM_mean = np.mean(obs_means[time_model == 1]), np.mean(model_means[time_model == 1])
+#     AMJ_mean = np.mean(obs_means[time_model == 2]), np.mean(model_means[time_model == 2])
+#     JAS_mean = np.mean(obs_means[time_model == 3]), np.mean(model_means[time_model == 3])
+#     OND_mean = np.mean(obs_means[time_model == 4]), np.mean(model_means[time_model == 4])
+
+#     return JFM_mean, AMJ_mean, JAS_mean, OND_mean
+
+
 # %%
 """
        The next Function is for retrieving all datasets from the previous functions and package them into a netCDF file: 
 """
     
-def get_model_obs_ts(fname,fname_obs,fname_out,output_path,model_frequency,var,depth=-1,ref_date=None):
+def get_model_obs_ts(fname,fname_obs,output_path,model_frequency,var,depth=-1,i_shifted=0,j_shifted=0,ref_date=None,lon_extract=None,lat_extract=None):
     print("6. Im in get_model_obs_ts")
-    # the output of this function is a netcdf file 'fname_out'
+    # the output of this function is a netcdf file 'output_path'
     # which will have the model and observations on the same time axis
     
     # get the observations time-series
     time_obs, data_obs, long_obs, lat_obs = get_ts_obs(fname_obs,var)   
+    if lon_extract is not None:
+        long_obs = lon_extract
     
+    if lat_extract is not None:
+        # lat_obs = lat_extract
+        # Get the data type of 'a'
+        # type_of_lat_obs = type(lat_obs)
+        # lat_extract = type_of_lat_obs
+        
+        lat_extract = np.array([lat_extract], dtype=np.float32)
+
+
+        # # Convert the float to an array of float32
+        # lat_extract = np.array(lat_extract, dtype=np.float32)
     # get the model time-series
-    time_model, data_model = get_ts(fname,var,long_obs,lat_obs,ref_date,depth=depth,time_lims=[time_obs[0],time_obs[-1]]) # Change the 10 back to -1
- 
+    time_model, data_model,lat_mod,lon_mod = get_ts(fname,var,long_obs,lat_obs,ref_date,depth=depth,i_shifted=i_shifted,j_shifted=j_shifted,time_lims=[time_obs[0],time_obs[-1]]) # Change the 10 back to -1
+
     # get the observations onto the model time axis
     data_obs_model_timeaxis = obs_2_new_timeaxis(fname_obs,time_model, model_frequency,var)
     # print(data_obs_model_timeaxis)
@@ -229,14 +279,27 @@ def get_model_obs_ts(fname,fname_obs,fname_out,output_path,model_frequency,var,d
     with nc.Dataset(output_path, 'w', format='NETCDF4') as nc_file:
         # Create dimensions
         nc_file.createDimension('time', len(time_model))
-        nc_file.createDimension('latitude', len(lat_obs))
-        nc_file.createDimension('longitude', len(long_obs))
+
+        # if lat_extract is not None:
+        #     nc_file.createDimension('latitude', len(lat_extract))
+        if j_shifted != 0:
+            lat_mod = np.array([lat_mod], dtype=np.float32)
+            nc_file.createDimension('latitude', len(lat_mod))
+        else:
+            nc_file.createDimension('latitude', len(lat_obs))
+
+        if i_shifted != 0:
+            nc_file.createDimension('longitude', len(lon_mod))
+        else:
+            nc_file.createDimension('longitude', len(long_obs))
         
         print(f"6.1 NetCDF file created at: {output_path}")
         # Create variables
         time_var = nc_file.createVariable('time', 'f8', ('time'))
-        lat_var = nc_file.createVariable('latitude', 'f4', ('latitude'))
-        lon_var = nc_file.createVariable('longitude', 'f4', ('longitude'))
+        lat_var = nc_file.createVariable('latitude_insitu', 'f4', ('latitude'))
+        lon_var = nc_file.createVariable('longitude_insitu', 'f4', ('longitude'))        
+        lat_mod_var = nc_file.createVariable('latitude_on_model', 'f4', ('latitude'))
+        lon_mod_var = nc_file.createVariable('longitude_on_model', 'f4', ('longitude'))        
         model_var = nc_file.createVariable('data_model', 'f4', ('time', 'latitude', 'longitude'))
         obs_model_var = nc_file.createVariable('data_obs_model_timeaxis', 'f4', ('time', 'latitude', 'longitude'))
     
@@ -247,13 +310,16 @@ def get_model_obs_ts(fname,fname_obs,fname_out,output_path,model_frequency,var,d
         
         # Convert each float timestamp to datetime
         # time_model = [datetime.fromtimestamp(float_time) for float_time in float_time_model]
-        for dt in float_time_model:
+        for dt in time_model:
             print(dt)
+    
     
         # Assign data to variables
         time_var[:] = float_time_model
         lat_var[:] = lat_obs
-        lon_var[:] = long_obs
+        lon_var[:] = long_obs        
+        lat_mod_var[:] = lat_mod
+        lon_mod_var[:] = lon_mod        
         model_var[:, :, :] = data_model
         obs_model_var[:, :, :] = data_obs_model_timeaxis
  
@@ -264,11 +330,22 @@ def get_model_obs_ts(fname,fname_obs,fname_out,output_path,model_frequency,var,d
         # time_var.units = 'days'
         lat_var.units = 'latitude'
         lon_var.units = 'longitude'
+        lat_mod_var.units = 'latitude'
+        lon_mod_var.units= 'longitude'
         model_var.units = 'degrees Celsius'
         obs_model_var.units = 'degrees Celsius'
         
         # data_model_nonan=data_model[not np.isnan(data_obs_model_timeaxis)]
         # data_obs_model_timeaxis_nonan=data_obs_model_timeaxis[not np.isnan(data_obs_model_timeaxis)]
+        
+        # if lat_extract is not None:
+        #     nc_file.setncattr('User_defined_obs_latitude',lat_extract)
+        # if lon_extract is not None:
+        #     nc_file.setncattr('User_defined_obs_longitude',lon_extract)
+            
+        nc_file.setncattr('depth',depth)
+        nc_file.setncattr('i-shift',i_shifted)
+        nc_file.setncattr('j-shift',j_shifted)
         
         # Calculate and add correlations as attributes
         correlation_model_obs = calculate_correlation(data_obs_model_timeaxis, data_model)
@@ -287,7 +364,19 @@ def get_model_obs_ts(fname,fname_obs,fname_out,output_path,model_frequency,var,d
         # Calculate and add total bias as an attribute
         total_bias = calculate_total_bias(data_obs_model_timeaxis, data_model)
         nc_file.setncattr('total_bias', total_bias)
+               
+        # Calculate and add total bias as an attribute
+        model_mean,obs_mean,model_min,obs_min,model_max,obs_max = calculate_min_mean_max(data_obs_model_timeaxis, data_model)
+        nc_file.setncattr('model_mean', model_mean)
+        nc_file.setncattr('obs_mean', obs_mean)
+        nc_file.setncattr('model_min', model_min)
+        nc_file.setncattr('obs_min', obs_min)
+        nc_file.setncattr('model_max', model_max)
+        nc_file.setncattr('obs_max', obs_max)
         
+        # seasonal_means = calculate_seasonal_means(data_obs_model_timeaxis,data_model,time_model)
+        # nc_file.setncattr('seasonal_means', seasonal_means)
+                
         # Calculate anomaly and climatology
         # model_ano = calculate_anomaly(data_obs,time_obs)
         # model_clim = calculate_anomaly(data_obs,time_obs)
@@ -298,26 +387,27 @@ def get_model_obs_ts(fname,fname_obs,fname_out,output_path,model_frequency,var,d
     
 # %%
 if __name__ == "__main__":
-    
     # Define the input parameters
-    dir_model = '/mnt/d/Run_False_Bay_2008_2018_SANHO/croco_avg_Y201*.nc.1'
-    fname_obs = '/mnt/d/DATA-20231010T133411Z-003/DATA/ATAP/Processed/Processed_Station_Files/FalseBay_FB001.nc'
-    fname_out = 'Validation_'+'FalseBay_FB001.nc'
+    dir_model = '/mnt/d/Run_False_Bay_2008_2018_SANHO/croco_avg_Y2016*.nc.1'
+    fname_obs = '/mnt/d/DATA-20231010T133411Z-003/DATA/ATAP/Processed/Processed_Station_Files/CapePoint_CP002.nc'
+    fname_out = 'Validation_'+'CapePoint_CP002.nc' #'CapePoint_CP002.nc'  'FalseBay_FB001.nc'
 
     # Output file name and directory
-    output_directory = '/mnt/d/DATA-20231010T133411Z-003/DATA/ATAP/Processed/Data_Validation/'
-    output_path = os.path.join(output_directory, fname_out)
-    
-    # SelectFiles = "croco_avg_Y2013M*.nc.1"
-    model_frequency='D'
+    output_directory = '/mnt/d/Run_False_Bay_2008_2018_SANHO/Validation/ATAP/model_validation/'
+    fname_out = os.path.join(output_directory, fname_out)
+
+    # Other parameters
+    model_frequency='24H'
     var = 'temp'
-    depth=-35
+    depth=-40
     ref_date = datetime(1990, 1, 1, 0, 0, 0)
     
     get_model_obs_ts(dir_model,fname_obs,
-                     fname_out,output_path,model_frequency=model_frequency,
-                     var=var,
-                     ref_date=ref_date,
-                     depth=depth                    
-                     )
+                      fname_out,model_frequency=model_frequency,
+                      var=var,
+                      ref_date=ref_date,
+                      depth=depth, 
+                      i_shifted=0,j_shifted=-2      
+                      # ,lat_extract = -34.4        
+                      )
     
