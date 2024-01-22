@@ -29,8 +29,8 @@ from model_evaluation_function  import get_model_obs_ts
 if __name__ == "__main__":
     # Define the input parameters
     dir_model = '/mnt/d/Run_False_Bay_2008_2018_SANHO/croco_avg_Y201*.nc.1'
-    fname_obs = '/mnt/d/DATA-20231010T133411Z-003/DATA/ATAP/Processed/Processed_Station_Files/Gansbaai_GSB003.nc'
-    fname_out = 'Validation_'+'Gansbaai_GSB003.nc' #'CapePoint_CP002.nc'  'FalseBay_FB001.nc'
+    fname_obs = '/mnt/d/DATA-20231010T133411Z-003/DATA/ATAP/Processed/Processed_Station_Files/CapePoint_CP001.nc'
+    fname_out = 'Validation_'+'CapePoint_CP001.nc' #'CapePoint_CP002.nc'  'FalseBay_FB001.nc'
 
     # Output file name and directory
     output_directory = '/mnt/d/Run_False_Bay_2008_2018_SANHO/Validation/ATAP/model_validation/'
@@ -39,7 +39,7 @@ if __name__ == "__main__":
     # Other parameters
     model_frequency='24H'
     var = 'temp'
-    depth=-23
+    depth=-32
     ref_date = datetime(1990, 1, 1, 0, 0, 0)
     
     get_model_obs_ts(dir_model,fname_obs,
@@ -47,8 +47,7 @@ if __name__ == "__main__":
                       var=var,
                       ref_date=ref_date,
                       depth=depth, 
-                      i_shifted=0,j_shifted=0   
-                      # ,lat_extract = -34.4        
+                      i_shifted=0,j_shifted=0        
                       )
 #%% CapePoint_CP003.nc
    

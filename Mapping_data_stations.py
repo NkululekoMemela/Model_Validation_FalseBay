@@ -5,20 +5,6 @@ Created on Fri Jan 19 17:42:07 2024
 
 @author: nkululeko
 """
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Fri Jan 19 17:42:07 2024
-
-@author: nkululeko
-"""
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Fri Jan 19 17:42:07 2024
-
-@author: nkululeko
-"""
 import os
 import xarray as xr
 import matplotlib.pyplot as plt

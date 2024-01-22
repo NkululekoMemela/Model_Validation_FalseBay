@@ -23,29 +23,28 @@ import os
 # from datetime import datetime,timedelta
 # import your libraries here
 
-
 # %%
-"""
-       The next Function is for loading IN SITU time series:
-           1. obs       : uses the given filename to open the file using xarray funtion
-           2. data_obs  : uses obs[var] extract from postprocess stored in somisana toolkit; 
-                          it retrieves obs data array
-           3. time_obs  : uses the traditional dot method to retrieve time array from obs and corrects it from
-                          a datetime64 datatype to a datetime.datetime object to ensure compliance with model time 
-                          astype methos can be found at:
-                          https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.astype.html
-           4. lat_obs   : uses the dot method to extract latitude values. the same applieas to long_obs
-           
-        Parameters:
-        - fname_obs         :filename of the observations
-        - var               :variable input by the user. should be the same in both the modeland obs netCDFs.
-
-        Returns:
-        - time_obs, data_obs, long_obs, lat_obs
-           
-"""
 def get_ts_obs(fname_obs, var):
-    print("2. Im in get_ts_obs")
+    """
+           The next Function is for loading IN SITU time series:
+               1. obs       : uses the given filename to open the file using xarray funtion
+               2. data_obs  : uses obs[var] extract from postprocess stored in somisana toolkit; 
+                              it retrieves obs data array
+               3. time_obs  : uses the traditional dot method to retrieve time array from obs and corrects it from
+                              a datetime64 datatype to a datetime.datetime object to ensure compliance with model time 
+                              astype methos can be found at:
+                              https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.astype.html
+               4. lat_obs   : uses the dot method to extract latitude values. the same applieas to long_obs
+               
+            Parameters:
+            - fname_obs         :filename of the observations
+            - var               :variable input by the user. should be the same in both the modeland obs netCDFs.
+
+            Returns:
+            - time_obs, data_obs, long_obs, lat_obs
+               
+    """
+    print("1. Im in get_ts_obs")
     # A generic function like this will work if we process all the observations
     obs = xr.open_dataset(fname_obs)
     data_obs = np.squeeze(obs[var].values)
@@ -57,30 +56,29 @@ def get_ts_obs(fname_obs, var):
     return time_obs, data_obs, long_obs, lat_obs
 
 # %%
-"""
-        The next METHOD is for finding the nearest point to insitu data in the model:
-            1. The if statement in this function is intended to apply in cases where there are 
-                multiple files to read in the model. It instructs to only read the first one the glob method
-                can be used to search for a file with a specific file name, I find it especially handy for
-                reading through several files with similar names: https://docs.python.org/3/library/glob.html
-            2. with post.get_ds(fname) as ds: Calculate the distance between model and insitu lats and lons  
-                at all grid points. If you pay special attention you will see that it is indeed a 
-                distance formular in the form of d = sqrt(x^2+y^2) expanded to d = sqrt((x1-x2)^2+(y1-y2)^2)
-            3. min_index findes indices j,i which represents the minimum distance between model and insitu points
-               unravel_index method Converts a flat index or array of flat indices into a tuple of coordinate 
-               arrays: https://numpy.org/doc/stable/reference/generated/numpy.unravel_index.html
-            
-        Parameters:
-        - fname             :filename of the model
-        - lat               :lat read from the insitu file
-        - lon               :lon read from the insitu file 
-
-        Returns:
-        - j, i
-"""
-
 def find_nearest_point(fname, Longi, Latit):
-    print("3. Im in find_nearest_point")
+    """
+            The next METHOD is for finding the nearest point to insitu data in the model:
+                1. The if statement in this function is intended to apply in cases where there are 
+                    multiple files to read in the model. It instructs to only read the first one the glob method
+                    can be used to search for a file with a specific file name, I find it especially handy for
+                    reading through several files with similar names: https://docs.python.org/3/library/glob.html
+                2. with post.get_ds(fname) as ds: Calculate the distance between model and insitu lats and lons  
+                    at all grid points. If you pay special attention you will see that it is indeed a 
+                    distance formular in the form of d = sqrt(x^2+y^2) expanded to d = sqrt((x1-x2)^2+(y1-y2)^2)
+                3. min_index findes indices j,i which represents the minimum distance between model and insitu points
+                   unravel_index method Converts a flat index or array of flat indices into a tuple of coordinate 
+                   arrays: https://numpy.org/doc/stable/reference/generated/numpy.unravel_index.html
+                
+            Parameters:
+            - fname             :filename of the model
+            - lat               :lat read from the insitu file
+            - lon               :lon read from the insitu file 
+
+            Returns:
+            - j, i
+    """
+    print("2. Im in find_nearest_point")
     # for effeciency we shouldn't use open_mfdataset for this function
     # only use the first file
     if ('*' in fname) or ('?' in fname) or ('[' in fname):
@@ -101,40 +99,40 @@ def find_nearest_point(fname, Longi, Latit):
 
 
 # %%
-"""
-       The next Function is for getting MODEL time series:
-           1. time_model is computed using the get_time function from somisana toolkit called postprocess
-               this model time is extracted based on time limits set by observations time-span that overlaps 
-               the model time span. fname taken in by time model is the model name.
-           2. j, i = find_nearest_point(fname, lon, lat) : finds the nearest point in the model to the insitu
-               lon, lat extracted from the insitu file.
-           3. the i_shifted or j_shifted represents the possible shift a user can physically input in order to 
-               offset as the new supposed point of observation so that the model will find a point nearest to 
-               it for model evaluation. The reason for this shift is a possible bathymetry mismatch between 
-               model and station observation which results in nans if the model is shallower than the insitu
-           4. the data_model function call extracts data in the location of the model that is nearest to the 
-               insitu dataset based on the j and i indices. In the case where the bathymetry becomes a factor
-               as explained above; then the data_model extracts at the shifted indices.
-           5. lat_mod and lon_mod are extracted with the aim of using them for plotting model location closest
-               to the insitu data with availability of corrasponding z-level to the insitu data later
-               
-        Parameters:
-        - fname             :filename of the model
-        - var               :variable input by the user. should be the same in both the modeland obs netCDFs.
-        - lat               :lat read from the insitu file
-        - lon               :lon read from the insitu file 
-        - ref_date          :static user input
-        - depth             :user input based on insitu sensor depth
-        - model_frequency   :user input, it is the model frequency if the model is an average model output
-        - i_shifted         :optional user inputs if the z level of the model does not match the insitu depth
-        - j_shifted         :optional user inputs if the z level of the model does not match the insitu depth
-        - time_lims         :limits are computed based on the length of the insitu data that matches model span
-
-        Returns:
-        - time_model, data_model,lat_mod,lon_mod
-"""
 def get_ts(fname, var, lon, lat, ref_date, depth=-1,i_shifted=0,j_shifted=0, time_lims=[]):
-    print("4. Im in get_ts")
+    """
+           The next Function is for getting MODEL time series:
+               1. time_model is computed using the get_time function from somisana toolkit called postprocess
+                   this model time is extracted based on time limits set by observations time-span that overlaps 
+                   the model time span. fname taken in by time model is the model name.
+               2. j, i = find_nearest_point(fname, lon, lat) : finds the nearest point in the model to the insitu
+                   lon, lat extracted from the insitu file.
+               3. the i_shifted or j_shifted represents the possible shift a user can physically input in order to 
+                   offset as the new supposed point of observation so that the model will find a point nearest to 
+                   it for model evaluation. The reason for this shift is a possible bathymetry mismatch between 
+                   model and station observation which results in nans if the model is shallower than the insitu
+               4. the data_model function call extracts data in the location of the model that is nearest to the 
+                   insitu dataset based on the j and i indices. In the case where the bathymetry becomes a factor
+                   as explained above; then the data_model extracts at the shifted indices.
+               5. lat_mod and lon_mod are extracted with the aim of using them for plotting model location closest
+                   to the insitu data with availability of corrasponding z-level to the insitu data later
+                   
+            Parameters:
+            - fname             :filename of the model
+            - var               :variable input by the user. should be the same in both the modeland obs netCDFs.
+            - lat               :lat read from the insitu file
+            - lon               :lon read from the insitu file 
+            - ref_date          :static user input
+            - depth             :user input based on insitu sensor depth
+            - model_frequency   :user input, it is the model frequency if the model is an average model output
+            - i_shifted         :optional user inputs if the z level of the model does not match the insitu depth
+            - j_shifted         :optional user inputs if the z level of the model does not match the insitu depth
+            - time_lims         :limits are computed based on the length of the insitu data that matches model span
+
+            Returns:
+            - time_model, data_model,lat_mod,lon_mod
+    """
+    print("3. Im in get_ts")
     # this function will eventually get moved into the postprocess.py file of the somisana repo
     # which is why I'd call it just 'get_ts', as it will be obvious that it relates to croco model output
     # time_lims=[datetime(2012,11,1),datetime(2018,11,1)]
@@ -158,43 +156,43 @@ def get_ts(fname, var, lon, lat, ref_date, depth=-1,i_shifted=0,j_shifted=0, tim
     return time_model, data_model,lat_mod,lon_mod
 
 # %%
-"""
-       The next Function is for matching time axis of both the insitu and model datasets:
-           1. obs_2_model_timeaxis function is designed to put the observation array on the model time axis.
-               This is achieved by reading the obs dataset using 
-               xarray (https://docs.xarray.dev/en/stable/generated/xarray.open_dataset.html) and then 
-               resample that array by taking daily means at base=12, which means daily means of the hourly 
-               obs dataset at 12:00 midday. here is the resample function source:
-               https://www.geeksforgeeks.org/python-pandas-dataframe-resample/
-           2. the operationof converting the datetime64 to datetime.datetime is performed to get the obs 
-               time array onto the same data type as the model time array.
-           3. the data_obs_model_timeaxis is first created as an empty array of null values of length 
-               time_model. this empty list is populated by the for loop that appends to each index at each
-               model index (index_mod) based on each time of the model index (time_model_now)
-           4. the if statement selects conditions at which the for loop applies which are: at every 
-               time step of the time model that also exists in the observations time array.
-           5. when the above condition is met, a new index_obs is computed as the index when time obs and
-               time model are the same. That index output represents a location of the obervation that 
-               is to be placed on the model time axis on that time axis array. the x.index method is a 
-               list index extarctor method explained in https://www.w3schools.com/python/ref_list_index.asp
-          6. the data_obs_model_timeaxis[index_mod] = data_obs[index_obs] simply assigns the observations to 
-              the above mentioned indices. therefore the data_obs_model_timeaxis is now observations at a model
-              time axis as it is named. 
-              
-        Parameters:
-        - fname_obs:        filename of observations
-        - time_model:       numpy array or list, corresponding time values
-        - model_frequency:  user input, it is the model frequency if the model is an average model output
-        - var:              variable input by the user. should be the same in both the modeland obs netCDFs.
-
-        Returns:
-        - data_obs_model_timeaxis
-"""
-
 def obs_2_model_timeaxis(fname_obs,time_model,model_frequency,var):
-    print("5. Im in obs_2_new_timeaxis")
+    """
+           The next Function is for matching time axis of both the insitu and model datasets:
+               1. obs_2_model_timeaxis function is designed to put the observation array on the model time axis.
+                   This is achieved by reading the obs dataset using 
+                   xarray (https://docs.xarray.dev/en/stable/generated/xarray.open_dataset.html) and then 
+                   resample that array by taking daily means at base=12, which means daily means of the hourly 
+                   obs dataset at 12:00 midday. here is the resample function source:
+                   https://www.geeksforgeeks.org/python-pandas-dataframe-resample/
+               2. the operationof converting the datetime64 to datetime.datetime is performed to get the obs 
+                   time array onto the same data type as the model time array.
+               3. the data_obs_model_timeaxis is first created as an empty array of null values of length 
+                   time_model. this empty list is populated by the for loop that appends to each index at each
+                   model index (index_mod) based on each time of the model index (time_model_now)
+               4. the if statement selects conditions at which the for loop applies which are: at every 
+                   time step of the time model that also exists in the observations time array.
+               5. when the above condition is met, a new index_obs is computed as the index when time obs and
+                   time model are the same. That index output represents a location of the obervation that 
+                   is to be placed on the model time axis on that time axis array. the x.index method is a 
+                   list index extarctor method explained in https://www.w3schools.com/python/ref_list_index.asp
+              6. the data_obs_model_timeaxis[index_mod] = data_obs[index_obs] simply assigns the observations to 
+                  the above mentioned indices. therefore the data_obs_model_timeaxis is now observations at a model
+                  time axis as it is named. 
+                  
+            Parameters:
+            - fname_obs:        filename of observations
+            - time_model:       numpy array or list, corresponding time values
+            - model_frequency:  user input, it is the model frequency if the model is an average model output
+            - var:              variable input by the user. should be the same in both the modeland obs netCDFs.
+
+            Returns:
+            - data_obs_model_timeaxis
+    """
+    print("4. Im in obs_2_new_timeaxis")
     obs = xr.open_dataset(fname_obs)
-    obs_formatted = obs.resample(time=model_frequency, base=12).mean()
+    obs_formatted = obs.resample(time=model_frequency, base=int(model_frequency[:-1])/2).mean()
+    print("base=",int(model_frequency[:-1])/2)
     data_obs = np.squeeze(obs_formatted[var].values)
     time_obs = obs_formatted.time.values
     time_obs = time_obs.astype('datetime64[s]').astype(datetime)
@@ -223,7 +221,7 @@ def obs_2_model_timeaxis(fname_obs,time_model,model_frequency,var):
 
     Returns:
     - model_mean,obs_mean,model_min,obs_min,model_max,obs_max
-    """
+    """    
 decimal = 3
 def calculate_rmse(obs_data, model_data):
     # Calculate RMSE, ignoring NaN values
@@ -232,8 +230,13 @@ def calculate_rmse(obs_data, model_data):
 
 def calculate_correlation(obs_data, model_data):
     # Calculate correlation, ignoring NaN values. This function is not really working but I am on it.
-    correlation = round(np.corrcoef(obs_data, model_data)[0, 1],decimal)
-    return correlation
+    model_in_situ_corr = round(np.corrcoef(obs_data, model_data)[0, 1],decimal) 
+    
+    # insitu_no_nan = obs_data[~np.isnan(obs_data)]
+    # model_no_nan = model_data[~np.isnan(obs_data)]    
+    # model_in_situ_corr = round(np.corrcoef(np.array(insitu_no_nan),np.array(model_no_nan)),decimal)[1][0]
+    
+    return model_in_situ_corr
 
 def calculate_std_dev(data):
     # Calculate standard deviation, ignoring NaN values
@@ -293,30 +296,27 @@ def calculate_seasonal_means(model_data, time_model,var):
 
 
 # %%
-"""
-       The next Function is for retrieving all datasets from the previous functions and package them into a netCDF file: 
-           1. initialize the function by calling all the parametres that will apply to subsequent functions.
-           2. Create a NetCDF file after getting returns from all the functions in the middle run
-           
-        Parameters:
-        - fname             :filename of the model
-        - fname_obs         :filename of observations
-        - output_path       :filename of fname_out
-        - var               :variable input by the user. should be the same in both the modeland obs netCDFs.
-        - lat               :lat read from the insitu file
-        - lon               :lon read from the insitu file 
-        - ref_date          :static user input
-        - depth             :user input based on insitu sensor depth
-        - model_frequency   :user input, it is the model frequency if the model is an average model output
-        - i_shifted         :optional user inputs if the z level of the model does not match the insitu depth
-        - j_shifted         :optional user inputs if the z level of the model does not match the insitu depth
-        - time_lims         :limits are computed based on the length of the insitu data that matches model span
-    
-
-"""
-    
 def get_model_obs_ts(fname,fname_obs,output_path,model_frequency,var,depth=-1,i_shifted=0,j_shifted=0,ref_date=None,lon_extract=None):
-    print("6. Im in get_model_obs_ts")
+    """
+           The next Function is for retrieving all datasets from the previous functions and package them into a netCDF file: 
+               1. initialize the function by calling all the parametres that will apply to subsequent functions.
+               2. Create a NetCDF file after getting returns from all the functions in the middle run
+               
+            Parameters:
+            - fname             :filename of the model
+            - fname_obs         :filename of observations
+            - output_path       :filename of fname_out
+            - var               :variable input by the user. should be the same in both the modeland obs netCDFs.
+            - lat               :lat read from the insitu file
+            - lon               :lon read from the insitu file 
+            - ref_date          :static user input
+            - depth             :user input based on insitu sensor depth
+            - model_frequency   :user input, it is the model frequency if the model is an average model output
+            - i_shifted         :optional user inputs if the z level of the model does not match the insitu depth
+            - j_shifted         :optional user inputs if the z level of the model does not match the insitu depth
+            - time_lims         :limits are computed based on the length of the insitu data that matches model span
+    """
+    print("5. Im in get_model_obs_ts")
     # the output of this function is a netcdf file 'output_path'
     # which will have the model and observations on the same time axis
     
@@ -397,8 +397,8 @@ def get_model_obs_ts(fname,fname_obs,output_path,model_frequency,var,depth=-1,i_
         nc_file.setncattr('j_shift',j_shifted)
         
         # Calculate and add correlations as attributes
-        correlation_model_obs = calculate_correlation(data_obs_model_timeaxis, data_model)
-        nc_file.setncattr('correlation_model_obs', correlation_model_obs)
+        model_in_situ_corr = calculate_correlation(data_obs_model_timeaxis, data_model)
+        nc_file.setncattr('correlation_model_obs', model_in_situ_corr)
         
         # Calculate and add standard deviations as attributes
         std_dev_model = calculate_std_dev(data_model)
