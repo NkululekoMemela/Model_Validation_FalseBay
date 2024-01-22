@@ -20,7 +20,7 @@ from pandas.plotting import table
 import calendar
 
 # %%
-filename = 'Validation_'+'CapePoint_CP003.nc'
+filename = 'Validation_'+'Gansbaai_GSB003.nc'
 savepath = '/mnt/d/Run_False_Bay_2008_2018_SANHO/Validation/ATAP/model_validation/'
 # dataset_path = '/mnt/d/Run_False_Bay_2008_2018_SANHO/Validation/ATAP/scripts/OutPut_Memela10!_Jan_24.nc'
 dataset_path = '/mnt/d/Run_False_Bay_2008_2018_SANHO/Validation/ATAP/model_validation/'
@@ -156,8 +156,8 @@ plt.savefig(savepath+filename[:-3]+'_'+ 'Timeseries_location.png')
 savename_tbl = 'stats_table.png'
 # Create a pandas DataFrame
 table_data = {
-    'Statistic': ['Depth','Correlation', 'Std Dev Model', 'Std Dev Obs', 'RMSE ', 'Total Bias', 'Total Bias', 'Model mean', 'observations mean', 'observations min', 'Model max', 'observations max'],
-    'Value': [ds.depth,round(ds.correlation_model_obs,3), ds.std_dev_model, round(ds.std_dev_obs_model,2), ds.rmse_model_obs, ds.total_bias,ds.model_mean ,ds.obs_mean ,ds.model_min ,ds.obs_min ,ds.model_max ,round(ds.obs_max,2) ]
+    'Statistic': ['Depth','Correlation', 'Std Dev Model', 'Std Dev Obs', 'RMSE ', 'Total Bias', 'Total Bias', 'Model mean', 'observations mean', 'observations min', 'Model max', 'observations max','JFM model mean','AMJ model mean','JAS model mean','OND model mean'],
+    'Value': [ds.depth, round(ds.correlation_model_obs,3), ds.std_dev_model, round(ds.std_dev_obs_model,2), ds.rmse_model_obs, ds.total_bias,ds.model_mean ,ds.obs_mean ,ds.model_min ,ds.obs_min ,ds.model_max ,round(ds.obs_max,2),ds.JFM,ds.AMJ,ds.JAS,ds.OND ]
 }
 
 table_df = pd.DataFrame(table_data)

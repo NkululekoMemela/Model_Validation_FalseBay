@@ -4,6 +4,24 @@
 Created on Fri Jan  5 05:13:58 2024
 @author: nkululeko
 """
+"""
+    The following initialization script executes the model_evaluation_function.py remotely.
+      - The get_model_obs_ts function is initialized by adding the following inputs.
+           
+        Parameters:
+        - fname             :filename of the model
+        - fname_obs         :filename of observations
+        - output_path       :filename of fname_out
+        - var               :variable input by the user. should be the same in both the modeland obs netCDFs.
+        - lat               :lat read from the insitu file
+        - lon               :lon read from the insitu file 
+        - ref_date          :static user input
+        - depth             :user input based on insitu sensor depth
+        - model_frequency   :user input, it is the model frequency if the model is an average model output
+        - i_shifted         :optional user inputs if the z level of the model does not match the insitu depth
+        - j_shifted         :optional user inputs if the z level of the model does not match the insitu depth
+        - time_lims         :limits are computed based on the length of the insitu data that matches model span    
+"""
 import os
 from datetime import datetime
 from model_evaluation_function  import get_model_obs_ts
@@ -11,9 +29,8 @@ from model_evaluation_function  import get_model_obs_ts
 if __name__ == "__main__":
     # Define the input parameters
     dir_model = '/mnt/d/Run_False_Bay_2008_2018_SANHO/croco_avg_Y201*.nc.1'
-    # dir_model = '/mnt/d/Gustavs_Cyclops_model/croco_avg_Y2006*.nc'
-    fname_obs = '/mnt/d/DATA-20231010T133411Z-003/DATA/ATAP/Processed/Processed_Station_Files/WalkerBay_WB003.nc'
-    fname_out = 'Validation_'+'WalkerBay_WB003.nc' #'CapePoint_CP002.nc'  'FalseBay_FB001.nc'
+    fname_obs = '/mnt/d/DATA-20231010T133411Z-003/DATA/ATAP/Processed/Processed_Station_Files/Gansbaai_GSB003.nc'
+    fname_out = 'Validation_'+'Gansbaai_GSB003.nc' #'CapePoint_CP002.nc'  'FalseBay_FB001.nc'
 
     # Output file name and directory
     output_directory = '/mnt/d/Run_False_Bay_2008_2018_SANHO/Validation/ATAP/model_validation/'
